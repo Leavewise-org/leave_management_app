@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -41,6 +42,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           email: _emailCtrl.text.trim(),
           password: _passCtrl.text,
         );
+        
+    // Only ask to save the password if the login was actually successful
+    if (ref.read(signInNotifierProvider).isSuccess) {
+      TextInput.finishAutofillContext();
+    }
   }
 
   @override
@@ -75,6 +81,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     obscurePass: _obscurePass,
                     onTogglePassword: () =>
                         setState(() => _obscurePass = !_obscurePass),
+                    onSubmitted: _submit,
                   ),
 
                   const SizedBox(height: 8),
@@ -160,6 +167,7 @@ class _FormCard extends StatelessWidget {
     required this.passCtrl,
     required this.obscurePass,
     required this.onTogglePassword,
+    required this.onSubmitted,
   });
 
   final GlobalKey<FormState> formKey;
@@ -167,6 +175,7 @@ class _FormCard extends StatelessWidget {
   final TextEditingController passCtrl;
   final bool obscurePass;
   final VoidCallback onTogglePassword;
+  final VoidCallback onSubmitted;
 
   @override
   Widget build(BuildContext context) {
@@ -177,65 +186,70 @@ class _FormCard extends StatelessWidget {
         border: Border.all(color: AppColors.border, width: 0.5),
       ),
       padding: const EdgeInsets.all(16),
-      child: Form(
-        key: formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Email
-            const Text(AppStrings.email, style: AppTextStyles.formLabel),
-            const SizedBox(height: 4),
-            TextFormField(
-              controller: emailCtrl,
-              keyboardType: TextInputType.emailAddress,
-              textInputAction: TextInputAction.next,
-              autocorrect: false,
-              style: AppTextStyles.formInput,
-              decoration: const InputDecoration(
-                hintText: AppStrings.emailHint,
-                prefixIcon: Icon(Icons.email_outlined,
-                    size: 18, color: AppColors.textTertiary),
-              ),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return AppStrings.fieldRequired;
-                }
-                if (!v.contains('@')) return AppStrings.invalidEmail;
-                return null;
-              },
-            ),
-
-            const SizedBox(height: 14),
-
-            // Password
-            const Text(AppStrings.password, style: AppTextStyles.formLabel),
-            const SizedBox(height: 4),
-            TextFormField(
-              controller: passCtrl,
-              obscureText: obscurePass,
-              textInputAction: TextInputAction.done,
-              style: AppTextStyles.formInput,
-              decoration: InputDecoration(
-                hintText: AppStrings.passwordHint,
-                prefixIcon: const Icon(Icons.lock_outline_rounded,
-                    size: 18, color: AppColors.textTertiary),
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    obscurePass
-                        ? Icons.visibility_outlined
-                        : Icons.visibility_off_outlined,
-                    size: 18,
-                    color: AppColors.textTertiary,
-                  ),
-                  onPressed: onTogglePassword,
+      child: AutofillGroup(
+        child: Form(
+          key: formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Email
+              const Text(AppStrings.email, style: AppTextStyles.formLabel),
+              const SizedBox(height: 4),
+              TextFormField(
+                controller: emailCtrl,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.username, AutofillHints.email],
+                autocorrect: false,
+                style: AppTextStyles.formInput,
+                decoration: const InputDecoration(
+                  hintText: AppStrings.emailHint,
+                  prefixIcon: Icon(Icons.email_outlined,
+                      size: 18, color: AppColors.textTertiary),
                 ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) {
+                    return AppStrings.fieldRequired;
+                  }
+                  if (!v.contains('@')) return AppStrings.invalidEmail;
+                  return null;
+                },
               ),
-              validator: (v) {
-                if (v == null || v.isEmpty) return AppStrings.fieldRequired;
-                return null;
-              },
-            ),
-          ],
+
+              const SizedBox(height: 14),
+
+              // Password
+              const Text(AppStrings.password, style: AppTextStyles.formLabel),
+              const SizedBox(height: 4),
+              TextFormField(
+                controller: passCtrl,
+                obscureText: obscurePass,
+                textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.password],
+                style: AppTextStyles.formInput,
+                onFieldSubmitted: (_) => onSubmitted(),
+                decoration: InputDecoration(
+                  hintText: AppStrings.passwordHint,
+                  prefixIcon: const Icon(Icons.lock_outline_rounded,
+                      size: 18, color: AppColors.textTertiary),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscurePass
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      size: 18,
+                      color: AppColors.textTertiary,
+                    ),
+                    onPressed: onTogglePassword,
+                  ),
+                ),
+                validator: (v) {
+                  if (v == null || v.isEmpty) return AppStrings.fieldRequired;
+                  return null;
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
