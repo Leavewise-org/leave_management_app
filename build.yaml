@@ -1,0 +1,11 @@
+targets:
+  $default:
+    builders:
+      source_gen|combining_builder:
+        options:
+          build_extensions:
+            '^lib/{{}}.dart': 'lib/{{}}.g.dart'
+      json_serializable:
+        options:
+          field_rename: snake
+          explicit_to_json: true

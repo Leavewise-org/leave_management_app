@@ -1,0 +1,98 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'auth_provider.dart';
+
+// **************************************************************************
+// RiverpodGenerator
+// **************************************************************************
+
+String _$supabaseClientHash() => r'de6240783d7dddb57e07d034deb0ddf8e2fcc3e4';
+
+/// See also [supabaseClient].
+@ProviderFor(supabaseClient)
+final supabaseClientProvider = AutoDisposeProvider<SupabaseClient>.internal(
+  supabaseClient,
+  name: r'supabaseClientProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$supabaseClientHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef SupabaseClientRef = AutoDisposeProviderRef<SupabaseClient>;
+String _$authRemoteDatasourceHash() =>
+    r'9462d918ea05a6702723849347486816f58cb1f5';
+
+/// See also [authRemoteDatasource].
+@ProviderFor(authRemoteDatasource)
+final authRemoteDatasourceProvider =
+    AutoDisposeProvider<AuthRemoteDatasource>.internal(
+  authRemoteDatasource,
+  name: r'authRemoteDatasourceProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$authRemoteDatasourceHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef AuthRemoteDatasourceRef = AutoDisposeProviderRef<AuthRemoteDatasource>;
+String _$authRepositoryHash() => r'f717a7d2f4d003b91262c8daa226b5e4b15ee011';
+
+/// See also [authRepository].
+@ProviderFor(authRepository)
+final authRepositoryProvider = AutoDisposeProvider<AuthRepository>.internal(
+  authRepository,
+  name: r'authRepositoryProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$authRepositoryHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef AuthRepositoryRef = AutoDisposeProviderRef<AuthRepository>;
+String _$authStateHash() => r'29af1d970488698b2fbee3e91c2bfd286689e7bf';
+
+/// Continuously emits the current [UserEntity] (or `null` when signed out).
+/// Used by the router guard to redirect automatically.
+///
+/// Copied from [authState].
+@ProviderFor(authState)
+final authStateProvider = AutoDisposeStreamProvider<UserEntity?>.internal(
+  authState,
+  name: r'authStateProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product') ? null : _$authStateHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef AuthStateRef = AutoDisposeStreamProviderRef<UserEntity?>;
+String _$signInNotifierHash() => r'75399693d8fd275baa1fc4b94d6fa849e2ecd503';
+
+/// See also [SignInNotifier].
+@ProviderFor(SignInNotifier)
+final signInNotifierProvider =
+    AutoDisposeNotifierProvider<SignInNotifier, SignInState>.internal(
+  SignInNotifier.new,
+  name: r'signInNotifierProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$signInNotifierHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$SignInNotifier = AutoDisposeNotifier<SignInState>;
+// ignore_for_file: type=lint
+// ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package
