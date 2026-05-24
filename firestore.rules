@@ -12,7 +12,7 @@ service cloud.firestore {
     }
     
     function isMySchool(schoolId) {
-      return getUserProfile().schoolId == schoolId;
+      return getUserProfile().school_id == schoolId;
     }
     
     function getMyRole() {
@@ -33,16 +33,14 @@ service cloud.firestore {
     match /leave_requests/{requestId} {
       allow read: if isAuthenticated() && (
         getMyRole() == 'super_admin' ||
-        (isMySchool(resource.data.schoolId) && getMyRole() in ['manager', 'school_admin']) ||
-        (isMySchool(resource.data.schoolId) && resource.data.userId == request.auth.uid)
+        getMyRole() in ['manager', 'school_admin'] ||
+        resource.data.userId == request.auth.uid
       );
       
       allow create: if isAuthenticated() && 
-        isMySchool(request.resource.data.schoolId) && 
         request.resource.data.userId == request.auth.uid;
         
       allow update: if isAuthenticated() && 
-        isMySchool(resource.data.schoolId) && 
         getMyRole() in ['manager', 'school_admin'];
     }
 

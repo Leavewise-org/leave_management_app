@@ -23,6 +23,9 @@ import '../../features/manager/presentation/pages/reports_page.dart';
 import '../../features/school/presentation/pages/admin_dashboard_page.dart';
 import '../../features/school/presentation/pages/manage_employees_page.dart';
 import '../../features/school/presentation/pages/school_settings_page.dart';
+import '../../features/super_admin/presentation/pages/super_admin_dashboard_page.dart';
+import '../../features/super_admin/presentation/pages/manage_schools_page.dart';
+import '../../features/super_admin/presentation/pages/system_settings_page.dart';
 
 import 'main_shell_page.dart';
 
@@ -48,6 +51,10 @@ abstract class AppRoutes {
   static const String schoolSettings = '/school/settings';
   static const String adminDashboard = '/school/dashboard';
   static const String manageEmployees = '/school/employees';
+  // Super Admin
+  static const String superAdminDashboard = '/system/dashboard';
+  static const String manageSchools = '/system/schools';
+  static const String systemSettings = '/system/settings';
 }
 
 // ── Auth listenable (no Riverpod chain involved) ───────────────────
@@ -223,6 +230,23 @@ GoRouter appRouter(Ref ref) {
         path: AppRoutes.schoolSettings,
         name: 'schoolSettings',
         builder: (context, state) => const SchoolSettingsPage(),
+      ),
+
+      // Super admin routes
+      GoRoute(
+        path: AppRoutes.superAdminDashboard,
+        name: 'superAdminDashboard',
+        builder: (context, state) => const SuperAdminDashboardPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.manageSchools,
+        name: 'manageSchools',
+        builder: (context, state) => const ManageSchoolsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.systemSettings,
+        name: 'systemSettings',
+        builder: (context, state) => const SystemSettingsPage(),
       ),
 
       // School onboarding

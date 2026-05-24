@@ -37,7 +37,7 @@ class ProfilePage extends ConsumerWidget {
           padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
           child: Column(
             children: [
-              _buildProfileHeader(userName, userInitials, userRole),
+              _buildProfileHeader(userName, userInitials, userRole, user?.departmentId),
               SizedBox(height: 32.h),
               _buildMenuSection(context, ref, user?.role),
             ],
@@ -47,7 +47,7 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildProfileHeader(String name, String initials, String role) {
+  Widget _buildProfileHeader(String name, String initials, String role, String? departmentId) {
     return Column(
       children: [
         Stack(
@@ -99,28 +99,32 @@ class ProfilePage extends ConsumerWidget {
             color: AppColors.textSecondary,
           ),
         ),
-        SizedBox(height: 16.h),
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-          decoration: BoxDecoration(
-            color: AppColors.approvedBackground,
-            borderRadius: BorderRadius.circular(20.r),
-          ),
-          child: Text(
-            'Engineering Dept',
-            style: TextStyle(
-              color: AppColors.approvedText,
-              fontWeight: FontWeight.bold,
-              fontSize: 12.sp,
+        if (departmentId != null && departmentId.isNotEmpty) ...[
+          SizedBox(height: 16.h),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              color: AppColors.approvedBackground,
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            child: Text(
+              departmentId,
+              style: TextStyle(
+                color: AppColors.approvedText,
+                fontWeight: FontWeight.bold,
+                fontSize: 12.sp,
+              ),
             ),
           ),
-        ),
+        ],
       ],
     );
   }
 
   Widget _buildMenuSection(BuildContext context, WidgetRef ref, String? role) {
-    final isAdmin = role == 'school_admin' || role == 'super_admin';
+    final isSuperAdmin = role == 'super_admin';
+    final isAdmin = role == 'school_admin' || isSuperAdmin;
+    final isManager = role == 'manager' || isAdmin;
 
     return Container(
       decoration: BoxDecoration(
@@ -137,6 +141,17 @@ class ProfilePage extends ConsumerWidget {
       ),
       child: Column(
         children: [
+          if (isSuperAdmin) ...[
+            _buildMenuItem(
+              icon: Icons.admin_panel_settings,
+              title: 'System Console',
+              iconColor: AppColors.primary,
+              onTap: () {
+                context.push(AppRoutes.superAdminDashboard);
+              },
+            ),
+            Divider(height: 1, color: AppColors.borderLight, indent: 56.w),
+          ],
           if (isAdmin) ...[
             _buildMenuItem(
               icon: Icons.admin_panel_settings_outlined,
@@ -145,6 +160,29 @@ class ProfilePage extends ConsumerWidget {
               onTap: () {
                 context.push(AppRoutes.adminDashboard);
               },
+            ),
+            Divider(height: 1, color: AppColors.borderLight, indent: 56.w),
+          ],
+          if (isManager) ...[
+            _buildMenuItem(
+              icon: Icons.fact_check_outlined,
+              title: 'Manager Approvals',
+              iconColor: AppColors.pending,
+              onTap: () => context.push(AppRoutes.approvals),
+            ),
+            Divider(height: 1, color: AppColors.borderLight, indent: 56.w),
+            _buildMenuItem(
+              icon: Icons.people_outline,
+              title: 'Team Directory',
+              iconColor: AppColors.pending,
+              onTap: () => context.push(AppRoutes.teamOverview),
+            ),
+            Divider(height: 1, color: AppColors.borderLight, indent: 56.w),
+            _buildMenuItem(
+              icon: Icons.analytics_outlined,
+              title: 'Team Reports',
+              iconColor: AppColors.pending,
+              onTap: () => context.push(AppRoutes.reports),
             ),
             Divider(height: 1, color: AppColors.borderLight, indent: 56.w),
           ],

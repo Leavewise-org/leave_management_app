@@ -1,14 +1,32 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:leave_management_app/core/constants/app_colors.dart';
-import 'package:leave_management_app/shared/widgets/status_pill.dart';
+import 'package:leave_management_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:leave_management_app/features/leave/domain/entities/leave_entity.dart';
+import 'package:leave_management_app/features/leave/presentation/providers/leave_providers.dart';
+import 'package:leave_management_app/shared/widgets/app_refresh_indicator.dart';
 
-class ApprovalsPage extends StatelessWidget {
+class ApprovalsPage extends ConsumerWidget {
   const ApprovalsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authStateProvider).value;
+    if (user == null) return const Scaffold();
+
+    final pendingLeavesAsync = ref.watch(pendingLeavesProvider(user.schoolId));
+
+    ref.listen(manageLeaveNotifierProvider, (prev, next) {
+      if (next.failure != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.failure!.message)),
+        );
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
@@ -27,55 +45,65 @@ class ApprovalsPage extends StatelessWidget {
           ),
         ),
       ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildPendingBadge(),
-                  SizedBox(height: 24.h),
-                  _buildApprovalCard(
-                    avatarText: 'NP',
-                    avatarColor: const Color(0xFF0EA5E9),
-                    name: 'Nuwan Perera',
-                    role: 'Backend Developer',
-                    duration: '3 Days',
-                    leaveType: 'Annual Leave',
-                    leaveIcon: Icons.wb_sunny_outlined,
-                    leaveColor: AppColors.primary,
-                    dateRange: 'May 22 – May 24, 2026',
-                    reason: 'Family vacation trip',
-                  ),
-                  SizedBox(height: 16.h),
-                  _buildApprovalCard(
-                    avatarText: 'AF',
-                    avatarColor: const Color(0xFFF43F5E),
-                    name: 'Amali Fernando',
-                    role: 'QA Engineer',
-                    duration: '2 Days',
-                    durationBg: AppColors.approvedBackground,
-                    durationColor: AppColors.approvedText,
-                    leaveType: 'Sick Leave',
-                    leaveIcon: Icons.monitor_heart_outlined,
-                    leaveColor: AppColors.sickLabel,
-                    dateRange: 'May 19 – May 20, 2026',
-                    reason: 'Medical appointment + recovery',
-                    attachment: 'medical_cert.pdf',
-                  ),
-                  SizedBox(height: 80.h),
-                ],
+      body: AppRefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(pendingLeavesProvider(user.schoolId));
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+                child: pendingLeavesAsync.when(
+                  data: (leaves) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildPendingBadge(leaves.length),
+                        SizedBox(height: 24.h),
+                        if (leaves.isEmpty)
+                          Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40.h),
+                              child: Text(
+                                'No pending requests right now.',
+                                style: TextStyle(color: AppColors.textSecondary, fontSize: 16.sp),
+                              ),
+                            ),
+                          )
+                        else
+                          for (final leave in leaves) ...[
+                            _buildApprovalCardFromEntity(ref, leave),
+                            SizedBox(height: 16.h),
+                          ],
+                        SizedBox(height: 80.h),
+                      ],
+                    );
+                  },
+                  loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
+                  error: (e, st) {
+                    print('Error loading approvals: $e');
+                    return Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 40.h),
+                        child: Text(
+                          'No pending requests right now.',
+                          style: TextStyle(color: AppColors.textSecondary, fontSize: 16.sp),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildPendingBadge() {
+  Widget _buildPendingBadge(int count) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
       decoration: BoxDecoration(
@@ -88,7 +116,7 @@ class ApprovalsPage extends StatelessWidget {
           Icon(Icons.access_time, color: AppColors.pendingText, size: 14.sp),
           SizedBox(width: 6.w),
           Text(
-            '3 Pending Requests',
+            '$count Pending Requests',
             style: TextStyle(
               fontSize: 12.sp,
               fontWeight: FontWeight.bold,
@@ -100,7 +128,59 @@ class ApprovalsPage extends StatelessWidget {
     );
   }
 
+  Widget _buildApprovalCardFromEntity(WidgetRef ref, LeaveEntity entity) {
+    IconData icon;
+    Color leaveColor;
+    
+    switch (entity.leaveType) {
+      case 'Annual':
+        icon = Icons.wb_sunny_outlined;
+        leaveColor = AppColors.annualLabel;
+        break;
+      case 'Sick':
+        icon = Icons.monitor_heart_outlined;
+        leaveColor = AppColors.sickLabel;
+        break;
+      case 'Casual':
+        icon = Icons.work_outline;
+        leaveColor = AppColors.pending;
+        break;
+      default:
+        icon = Icons.access_time;
+        leaveColor = AppColors.textSecondary;
+    }
+
+    final dateFormat = DateFormat('MMM dd, yyyy');
+    final dateStr = entity.durationDays == 1
+        ? dateFormat.format(entity.startDate)
+        : '${dateFormat.format(entity.startDate)} \u2013 ${dateFormat.format(entity.endDate)}';
+    
+    return _buildApprovalCard(
+      ref: ref,
+      leaveId: entity.id,
+      avatarText: _getInitials(entity.userName),
+      avatarColor: AppColors.primary,
+      name: entity.userName,
+      role: 'Employee',
+      duration: '${entity.durationDays} Day${entity.durationDays > 1 ? 's' : ''}',
+      leaveType: '${entity.leaveType} Leave',
+      leaveIcon: icon,
+      leaveColor: leaveColor,
+      dateRange: dateStr,
+      reason: entity.reason,
+      attachment: entity.attachmentUrl,
+    );
+  }
+
+  String _getInitials(String name) {
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
+    return name.isNotEmpty ? name[0].toUpperCase() : '?';
+  }
+
   Widget _buildApprovalCard({
+    required WidgetRef ref,
+    required String leaveId,
     required String avatarText,
     required Color avatarColor,
     required String name,
@@ -191,7 +271,9 @@ class ApprovalsPage extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: () {
+                    ref.read(manageLeaveNotifierProvider.notifier).updateStatus(leaveId, 'rejected');
+                  },
                   icon: Icon(Icons.close, size: 18.sp),
                   label: const Text('Reject'),
                   style: OutlinedButton.styleFrom(
@@ -205,7 +287,9 @@ class ApprovalsPage extends StatelessWidget {
               SizedBox(width: 12.w),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: () {},
+                  onPressed: () {
+                    ref.read(manageLeaveNotifierProvider.notifier).updateStatus(leaveId, 'approved');
+                  },
                   icon: Icon(Icons.check, size: 18.sp),
                   label: const Text('Approve'),
                   style: OutlinedButton.styleFrom(

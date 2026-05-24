@@ -5,8 +5,8 @@ import 'package:leave_management_app/core/constants/app_colors.dart';
 import 'package:leave_management_app/core/router/app_router.dart';
 import 'package:leave_management_app/shared/widgets/app_refresh_indicator.dart';
 
-class AdminDashboardPage extends ConsumerWidget {
-  const AdminDashboardPage({super.key});
+class SuperAdminDashboardPage extends ConsumerWidget {
+  const SuperAdminDashboardPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,7 +20,7 @@ class AdminDashboardPage extends ConsumerWidget {
           onPressed: () => context.pop(),
         ),
         title: const Text(
-          'Admin Console',
+          'System Console',
           style: TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.w700,
@@ -32,7 +32,7 @@ class AdminDashboardPage extends ConsumerWidget {
       body: SafeArea(
         child: AppRefreshIndicator(
           onRefresh: () async {
-            // TODO: Invalidate admin providers here when they are implemented
+            // TODO: Invalidate super admin providers here when they are implemented
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -42,7 +42,7 @@ class AdminDashboardPage extends ConsumerWidget {
             children: [
               // Welcome header
               const Text(
-                'School Dashboard',
+                'Super Admin Dashboard',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w700,
@@ -51,7 +51,7 @@ class AdminDashboardPage extends ConsumerWidget {
               ),
               const SizedBox(height: 4),
               const Text(
-                'Overview of all activities in your school',
+                'Global overview of platform activity',
                 style: TextStyle(
                   fontSize: 14,
                   color: AppColors.textSecondary,
@@ -59,31 +59,31 @@ class AdminDashboardPage extends ConsumerWidget {
               ),
               const SizedBox(height: 24),
 
-              // Quick Metrics
+              // System Metrics
               Column(
                 children: [
-                  _MetricCard(
-                    title: 'Active Employees',
-                    value: '124',
-                    icon: Icons.people_outline,
+                  _SystemMetricCard(
+                    title: 'Onboarded Schools',
+                    value: '15',
+                    icon: Icons.domain,
                     color: AppColors.primary,
                     backgroundColor: AppColors.primaryLight,
                   ),
                   const SizedBox(height: 12),
-                  _MetricCard(
-                    title: 'Pending Requests',
-                    value: '12',
-                    icon: Icons.pending_actions,
+                  _SystemMetricCard(
+                    title: 'Total Active Users',
+                    value: '1,420',
+                    icon: Icons.groups,
                     color: AppColors.pending,
                     backgroundColor: AppColors.pendingBackground,
                   ),
                   const SizedBox(height: 12),
-                  _MetricCard(
-                    title: 'On Leave Today',
-                    value: '5',
-                    icon: Icons.event_busy,
-                    color: AppColors.rejectedText,
-                    backgroundColor: AppColors.rejectedBackground,
+                  _SystemMetricCard(
+                    title: 'Requests Processed',
+                    value: '8,391',
+                    icon: Icons.task_alt,
+                    color: AppColors.approvedText,
+                    backgroundColor: AppColors.approvedBackground,
                   ),
                 ],
               ),
@@ -91,7 +91,7 @@ class AdminDashboardPage extends ConsumerWidget {
 
               // Action Cards
               const Text(
-                'Manage',
+                'Platform Management',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w700,
@@ -100,20 +100,20 @@ class AdminDashboardPage extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               
-              _ActionCard(
-                title: 'Employee Directory',
-                subtitle: 'Manage roles, view balances, and remove users.',
-                icon: Icons.manage_accounts_outlined,
+              _SystemActionCard(
+                title: 'Manage Schools',
+                subtitle: 'View all tenants, onboard new schools, or suspend accounts.',
+                icon: Icons.account_balance,
                 iconColor: AppColors.primary,
-                onTap: () => context.push(AppRoutes.manageEmployees),
+                onTap: () => context.push(AppRoutes.manageSchools),
               ),
               const SizedBox(height: 12),
-              _ActionCard(
-                title: 'School Settings',
-                subtitle: 'Update policies, name, and default quotas.',
-                icon: Icons.settings_outlined,
+              _SystemActionCard(
+                title: 'System Settings',
+                subtitle: 'Configure global defaults and view system versions.',
+                icon: Icons.admin_panel_settings,
                 iconColor: AppColors.textSecondary,
-                onTap: () => context.push(AppRoutes.schoolSettings),
+                onTap: () => context.push(AppRoutes.systemSettings),
               ),
             ],
           ),
@@ -124,14 +124,14 @@ class AdminDashboardPage extends ConsumerWidget {
   }
 }
 
-class _MetricCard extends StatelessWidget {
+class _SystemMetricCard extends StatelessWidget {
   final String title;
   final String value;
   final IconData icon;
   final Color color;
   final Color backgroundColor;
 
-  const _MetricCard({
+  const _SystemMetricCard({
     required this.title,
     required this.value,
     required this.icon,
@@ -196,14 +196,14 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-class _ActionCard extends StatelessWidget {
+class _SystemActionCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
   final Color iconColor;
   final VoidCallback onTap;
 
-  const _ActionCard({
+  const _SystemActionCard({
     required this.title,
     required this.subtitle,
     required this.icon,

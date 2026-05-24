@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:leave_management_app/core/constants/app_colors.dart';
+import 'package:leave_management_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:leave_management_app/features/leave/presentation/providers/leave_providers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 
-class ApplyLeavePage extends StatefulWidget {
+class ApplyLeavePage extends ConsumerStatefulWidget {
   const ApplyLeavePage({super.key});
 
   @override
-  State<ApplyLeavePage> createState() => _ApplyLeavePageState();
+  ConsumerState<ApplyLeavePage> createState() => _ApplyLeavePageState();
 }
 
-class _ApplyLeavePageState extends State<ApplyLeavePage> {
+class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
   String _selectedLeaveType = 'Annual';
   DateTime? _startDate;
   DateTime? _endDate;
@@ -69,41 +72,76 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
-      appBar: AppBar(
+    final user = ref.watch(authStateProvider).value;
+
+    ref.listen(submitLeaveNotifierProvider, (prev, next) {
+      if (next.isSuccess) {
+        ref.read(submitLeaveNotifierProvider.notifier).reset();
+        _showSuccessDialog(context);
+      } else if (next.failure != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.failure!.message)),
+        );
+      }
+    });
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if(Navigator.of(context).canPop()){
+          Navigator.of(context).pop();
+        }else{
+          context.go('/home');
+        }
+      },
+      child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'New Request',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 20.sp,
-            fontWeight: FontWeight.bold,
+        appBar: AppBar(
+          backgroundColor: AppColors.scaffoldBackground,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
+            onPressed: () => context.pop(),
+          ),
+          title: Text(
+            'New Request',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 20.sp,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
-      ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 24.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 16.h),
-            _buildLeaveTypeSection(),
-            SizedBox(height: 24.h),
-            _buildDateDurationSection(),
-            SizedBox(height: 24.h),
-            _buildReasonSection(),
-            SizedBox(height: 24.h),
-            _buildAttachmentSection(),
-            const Spacer(),
-            _buildSubmitButton(),
-            SizedBox(height: 32.h),
-          ],
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 24.w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 16.h),
+                        _buildLeaveTypeSection(),
+                        SizedBox(height: 24.h),
+                        _buildDateDurationSection(),
+                        SizedBox(height: 24.h),
+                        _buildReasonSection(),
+                        SizedBox(height: 24.h),
+                        _buildAttachmentSection(),
+                        const Spacer(),
+                        _buildSubmitButton(user),
+                        SizedBox(height: 32.h),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -372,14 +410,37 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
     );
   }
 
-  Widget _buildSubmitButton() {
+  Widget _buildSubmitButton(dynamic user) {
+    final isLoading = ref.watch(submitLeaveNotifierProvider).isLoading;
+
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: () {
-          // TODO: Submit logic
-          context.pop();
-        },
+        onPressed: isLoading
+            ? null
+            : () {
+                if (user == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('User not found. Please log in again.')),
+                  );
+                  return;
+                }
+                if (_startDate == null || _endDate == null || _reasonController.text.trim().isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill all required fields')),
+                  );
+                  return;
+                }
+                ref.read(submitLeaveNotifierProvider.notifier).submitLeave(
+                      userId: user.id,
+                      schoolId: user.schoolId,
+                      userName: user.fullName,
+                      leaveType: _selectedLeaveType,
+                      startDate: _startDate!,
+                      endDate: _endDate!,
+                      reason: _reasonController.text.trim(),
+                    );
+              },
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
@@ -387,11 +448,96 @@ class _ApplyLeavePageState extends State<ApplyLeavePage> {
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
           elevation: 0,
         ),
-        child: Text(
-          'Submit Request',
-          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
-        ),
+        child: isLoading
+            ? SizedBox(
+                width: 20.w,
+                height: 20.w,
+                child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+              )
+            : Text(
+                'Submit Request',
+                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold),
+              ),
       ),
+    );
+  }
+
+  void _showSuccessDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.r)),
+          backgroundColor: AppColors.scaffoldBackground,
+          child: Padding(
+            padding: EdgeInsets.all(32.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80.w,
+                  height: 80.w,
+                  decoration: BoxDecoration(
+                    color: AppColors.approvedBackground,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check_circle_rounded,
+                    color: AppColors.approvedText,
+                    size: 48.w,
+                  ),
+                ),
+                SizedBox(height: 24.h),
+                Text(
+                  'Success!',
+                  style: TextStyle(
+                    fontSize: 24.sp,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  'Your leave request has been submitted successfully and is awaiting approval.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    color: AppColors.textSecondary,
+                    height: 1.5,
+                  ),
+                ),
+                SizedBox(height: 32.h),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56.h,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(dialogContext).pop(); // Close dialog
+                      context.go('/home'); // Go to dashboard
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16.r),
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'Return to Dashboard',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

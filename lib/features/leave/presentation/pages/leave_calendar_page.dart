@@ -23,41 +23,52 @@ class _LeaveCalendarPageState extends State<LeaveCalendarPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
-      appBar: AppBar(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if(Navigator.of(context).canPop()){
+          Navigator.of(context).pop();
+        }else{
+          context.go('/home');
+        }
+      },
+      child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Calendar',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 20.sp,
-            fontWeight: FontWeight.bold,
+        appBar: AppBar(
+          backgroundColor: AppColors.scaffoldBackground,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
+            onPressed: () => context.pop(),
           ),
-        ),
-      ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildCalendarCard(),
-                  SizedBox(height: 24.h),
-                  _buildUpcomingSection(),
-                  SizedBox(height: 80.h),
-                ],
-              ),
+          title: Text(
+            'Calendar',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 20.sp,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        ],
+        ),
+        body: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildCalendarCard(),
+                    SizedBox(height: 24.h),
+                    _buildUpcomingSection(),
+                    SizedBox(height: 80.h),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
