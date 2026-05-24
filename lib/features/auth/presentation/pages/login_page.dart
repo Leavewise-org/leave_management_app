@@ -58,10 +58,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             child: Form(
               key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+              child: AutofillGroup(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                   // Avatar icon
                   Center(
                     child: Container(
@@ -241,6 +242,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     ],
                   ),
                 ],
+              ),
               ),
             ),
           ),

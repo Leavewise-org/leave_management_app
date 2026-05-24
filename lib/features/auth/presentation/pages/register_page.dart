@@ -70,10 +70,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Form(
               key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+              child: AutofillGroup(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                   const Text(
                     'Create Account',
                     style: TextStyle(
@@ -120,7 +121,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     controller: _emailCtrl,
                     hintText: 'name@school.edu',
                     keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.email],
+                    autofillHints: const [AutofillHints.newUsername, AutofillHints.email],
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return AppStrings.fieldRequired;
                       if (!v.contains('@')) return AppStrings.invalidEmail;
@@ -234,6 +235,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     ],
                   ),
                 ],
+              ),
               ),
             ),
           ),

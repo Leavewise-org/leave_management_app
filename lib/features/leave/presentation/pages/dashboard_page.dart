@@ -1,22 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:leave_management_app/core/router/app_router.dart';
 import 'package:leave_management_app/shared/widgets/balance_card.dart';
 import 'package:leave_management_app/shared/widgets/quick_action_btn.dart';
 import 'package:leave_management_app/shared/widgets/status_pill.dart';
 import 'package:leave_management_app/core/constants/app_colors.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:leave_management_app/features/auth/presentation/providers/auth_provider.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // We'll get real data later, using dummy data for now
-    final user = FirebaseAuth.instance.currentUser;
-    final userName = user?.displayName ?? 'Employee Name';
-    final userInitials = userName.isNotEmpty ? userName.substring(0, 2).toUpperCase() : 'EMP';
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.value;
+    
+    final userName = user?.fullName ?? 'Employee Name';
+    final userInitials = user?.initials ?? 'EMP';
 
     return Scaffold(
       backgroundColor: AppColors.surface,

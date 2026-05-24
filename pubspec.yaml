@@ -48,6 +48,7 @@ dependencies:
   firebase_messaging: ^16.2.2
   firebase_auth: ^6.5.1
   cloud_firestore: ^6.4.1
+  file_picker: ^8.0.3
 
 dev_dependencies:
   flutter_test:
