@@ -6,14 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/constants/app_text_styles.dart';
-import '../../../../core/router/app_router.dart';
 import '../providers/auth_provider.dart';
 
-/// Login page — matches the design style extracted from the HTML template:
-/// • Blue top section with school branding
-/// • White card with email/password fields
-/// • Loading state with spinner inside the button
-/// • Inline error banner for auth failures
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({super.key});
 
@@ -43,7 +37,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           password: _passCtrl.text,
         );
         
-    // Only ask to save the password if the login was actually successful
     if (ref.read(signInNotifierProvider).isSuccess) {
       TextInput.finishAutofillContext();
     }
@@ -54,62 +47,200 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     final signInState = ref.watch(signInNotifierProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
-      body: Column(
-        children: [
-          // ── Blue top header ───────────────────────────────────────
-          _TopHeader(),
-
-          // ── Login card ───────────────────────────────────────────
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+      backgroundColor: AppColors.surface,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Form(
+              key: _formKey,
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Avatar icon
+                  Center(
+                    child: Container(
+                      width: 72,
+                      height: 72,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.primary.withValues(alpha: 0.4),
+                            blurRadius: 25,
+                            offset: const Offset(0, 10),
+                            spreadRadius: -5,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.business_center_outlined,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                    ),
+                  ),
+
+                  // Titles
+                  const Text(
+                    'Welcome Back',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Sign in to continue to Workspace',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+
                   // Error banner
                   if (signInState.failure != null) ...[
                     _ErrorBanner(message: signInState.failure!.message),
                     const SizedBox(height: 16),
                   ],
 
-                  // Form card
-                  _FormCard(
-                    formKey: _formKey,
-                    emailCtrl: _emailCtrl,
-                    passCtrl: _passCtrl,
-                    obscurePass: _obscurePass,
-                    onTogglePassword: () =>
-                        setState(() => _obscurePass = !_obscurePass),
-                    onSubmitted: _submit,
+                  // Email
+                  const Text('Email Address', style: AppTextStyles.formLabel),
+                  const SizedBox(height: 8),
+                  _InputField(
+                    controller: _emailCtrl,
+                    hintText: 'name@school.edu',
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.username, AutofillHints.email],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return AppStrings.fieldRequired;
+                      if (!v.contains('@')) return AppStrings.invalidEmail;
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Password
+                  const Text('Password', style: AppTextStyles.formLabel),
+                  const SizedBox(height: 8),
+                  _InputField(
+                    controller: _passCtrl,
+                    hintText: '••••••••',
+                    obscureText: _obscurePass,
+                    autofillHints: const [AutofillHints.password],
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscurePass ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                        size: 20,
+                        color: AppColors.textTertiary,
+                      ),
+                      onPressed: () => setState(() => _obscurePass = !_obscurePass),
+                    ),
+                    onFieldSubmitted: (_) => _submit(),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return AppStrings.fieldRequired;
+                      return null;
+                    },
                   ),
 
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
 
-                  // Forgot password
+                  // Forgot Password
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
                       onPressed: () {}, // TODO: forgot password flow
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
                       child: const Text(
-                        AppStrings.forgotPassword,
-                        style: AppTextStyles.cardLink,
+                        'Forgot Password?',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 32),
 
-                  // Submit button
-                  _SubmitButton(
-                    isLoading: signInState.isLoading,
-                    onPressed: _submit,
+                  // Submit Button
+                  SizedBox(
+                    height: 52,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 4,
+                        shadowColor: AppColors.primary.withValues(alpha: 0.2),
+                      ),
+                      onPressed: signInState.isLoading ? null : _submit,
+                      child: signInState.isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Sign In',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Register
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        "Don't have an account? ",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          // TODO: Register navigation
+                        },
+                        child: const Text(
+                          'Register',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -119,168 +250,59 @@ class _LoginPageState extends ConsumerState<LoginPage> {
 // Sub-widgets
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _TopHeader extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // Status bar height
-    final topPad = MediaQuery.of(context).padding.top;
-    return Container(
-      width: double.infinity,
-      padding: EdgeInsets.fromLTRB(20, topPad + 24, 20, 32),
-      decoration: const BoxDecoration(
-        color: AppColors.topBar,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // School icon
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(
-              Icons.school_rounded,
-              color: Colors.white,
-              size: 26,
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text('Leave Manager', style: AppTextStyles.topBarTitle),
-          const SizedBox(height: 4),
-          const Text(
-            'Sign in to your school account',
-            style: AppTextStyles.topBarSubtitle,
-          ),
-        ],
-      ),
-    );
-  }
-}
+class _InputField extends StatelessWidget {
+  final TextEditingController controller;
+  final String hintText;
+  final bool obscureText;
+  final Widget? suffixIcon;
+  final TextInputType? keyboardType;
+  final Iterable<String>? autofillHints;
+  final String? Function(String?)? validator;
+  final void Function(String)? onFieldSubmitted;
 
-class _FormCard extends StatelessWidget {
-  const _FormCard({
-    required this.formKey,
-    required this.emailCtrl,
-    required this.passCtrl,
-    required this.obscurePass,
-    required this.onTogglePassword,
-    required this.onSubmitted,
+  const _InputField({
+    required this.controller,
+    required this.hintText,
+    this.obscureText = false,
+    this.suffixIcon,
+    this.keyboardType,
+    this.autofillHints,
+    this.validator,
+    this.onFieldSubmitted,
   });
 
-  final GlobalKey<FormState> formKey;
-  final TextEditingController emailCtrl;
-  final TextEditingController passCtrl;
-  final bool obscurePass;
-  final VoidCallback onTogglePassword;
-  final VoidCallback onSubmitted;
-
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border, width: 0.5),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: AutofillGroup(
-        child: Form(
-          key: formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Email
-              const Text(AppStrings.email, style: AppTextStyles.formLabel),
-              const SizedBox(height: 4),
-              TextFormField(
-                controller: emailCtrl,
-                keyboardType: TextInputType.emailAddress,
-                textInputAction: TextInputAction.next,
-                autofillHints: const [AutofillHints.username, AutofillHints.email],
-                autocorrect: false,
-                style: AppTextStyles.formInput,
-                decoration: const InputDecoration(
-                  hintText: AppStrings.emailHint,
-                  prefixIcon: Icon(Icons.email_outlined,
-                      size: 18, color: AppColors.textTertiary),
-                ),
-                validator: (v) {
-                  if (v == null || v.trim().isEmpty) {
-                    return AppStrings.fieldRequired;
-                  }
-                  if (!v.contains('@')) return AppStrings.invalidEmail;
-                  return null;
-                },
-              ),
-
-              const SizedBox(height: 14),
-
-              // Password
-              const Text(AppStrings.password, style: AppTextStyles.formLabel),
-              const SizedBox(height: 4),
-              TextFormField(
-                controller: passCtrl,
-                obscureText: obscurePass,
-                textInputAction: TextInputAction.done,
-                autofillHints: const [AutofillHints.password],
-                style: AppTextStyles.formInput,
-                onFieldSubmitted: (_) => onSubmitted(),
-                decoration: InputDecoration(
-                  hintText: AppStrings.passwordHint,
-                  prefixIcon: const Icon(Icons.lock_outline_rounded,
-                      size: 18, color: AppColors.textTertiary),
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      obscurePass
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      size: 18,
-                      color: AppColors.textTertiary,
-                    ),
-                    onPressed: onTogglePassword,
-                  ),
-                ),
-                validator: (v) {
-                  if (v == null || v.isEmpty) return AppStrings.fieldRequired;
-                  return null;
-                },
-              ),
-            ],
-          ),
+    return TextFormField(
+      controller: controller,
+      obscureText: obscureText,
+      keyboardType: keyboardType,
+      autofillHints: autofillHints,
+      onFieldSubmitted: onFieldSubmitted,
+      validator: validator,
+      style: AppTextStyles.formInput,
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: TextStyle(
+          color: AppColors.textSecondary.withValues(alpha: 0.7),
+          fontSize: 14,
         ),
-      ),
-    );
-  }
-}
-
-class _SubmitButton extends StatelessWidget {
-  const _SubmitButton({
-    required this.isLoading,
-    required this.onPressed,
-  });
-
-  final bool isLoading;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 46,
-      child: ElevatedButton(
-        onPressed: isLoading ? null : onPressed,
-        child: isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : const Text(AppStrings.signIn),
+        filled: true,
+        fillColor: AppColors.surface,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+        ),
+        suffixIcon: suffixIcon,
       ),
     );
   }
@@ -316,3 +338,4 @@ class _ErrorBanner extends StatelessWidget {
     );
   }
 }
+
