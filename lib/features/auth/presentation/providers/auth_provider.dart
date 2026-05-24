@@ -97,3 +97,41 @@ class SignInNotifier extends _$SignInNotifier {
 
   void clearError() => state = state.copyWith(clearFailure: true);
 }
+
+// ── Sign-up notifier ─────────────────────────────────────────────
+
+@riverpod
+class SignUpNotifier extends _$SignUpNotifier {
+  @override
+  SignInState build() => const SignInState();
+
+  Future<void> signUp({
+    required String email,
+    required String password,
+    required String fullName,
+    required String schoolSlug,
+  }) async {
+    state = state.copyWith(isLoading: true, clearFailure: true);
+
+    try {
+      final user = await ref.read(authRepositoryProvider).signUp(
+            email: email,
+            password: password,
+            fullName: fullName,
+            schoolSlug: schoolSlug,
+          );
+
+      state = state.copyWith(isLoading: false, user: user);
+    } on AuthFailure catch (f) {
+      state = state.copyWith(isLoading: false, failure: f);
+    } catch (e) {
+      debugPrint('❌ Unexpected sign-up error: $e');
+      state = state.copyWith(
+        isLoading: false,
+        failure: UnknownAuthFailure(e.toString()),
+      );
+    }
+  }
+
+  void clearError() => state = state.copyWith(clearFailure: true);
+}

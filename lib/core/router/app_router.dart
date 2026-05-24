@@ -10,6 +10,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // Auth
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/register_page.dart';
 
 part 'app_router.g.dart';
 
@@ -17,6 +18,7 @@ part 'app_router.g.dart';
 abstract class AppRoutes {
   static const String splash = '/';
   static const String login = '/login';
+  static const String register = '/register';
   static const String dashboard = '/home';
   static const String applyLeave = '/home/apply';
   static const String leaveHistory = '/home/history';
@@ -72,6 +74,7 @@ GoRouter appRouter(Ref ref) {
 
       final isSplash = location == AppRoutes.splash;
       final isLogin = location == AppRoutes.login;
+      final isRegister = location == AppRoutes.register;
 
       // 1. Splash → decide where to go
       if (isSplash) {
@@ -79,12 +82,12 @@ GoRouter appRouter(Ref ref) {
       }
 
       // 2. Not logged in + trying to access a protected page → login
-      if (!isLoggedIn && !isLogin) {
+      if (!isLoggedIn && !isLogin && !isRegister) {
         return AppRoutes.login;
       }
 
-      // 3. Logged in + on the login page → dashboard
-      if (isLoggedIn && isLogin) {
+      // 3. Logged in + on the login/register page → dashboard
+      if (isLoggedIn && (isLogin || isRegister)) {
         return AppRoutes.dashboard;
       }
 
@@ -105,6 +108,13 @@ GoRouter appRouter(Ref ref) {
         path: AppRoutes.login,
         name: 'login',
         builder: (context, state) => const LoginPage(),
+      ),
+
+      // Register
+      GoRoute(
+        path: AppRoutes.register,
+        name: 'register',
+        builder: (context, state) => const RegisterPage(),
       ),
 
       // Employee shell — Dashboard + nested tabs

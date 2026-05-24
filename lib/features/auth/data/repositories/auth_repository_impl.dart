@@ -55,6 +55,40 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<UserEntity> signUp({
+    required String email,
+    required String password,
+    required String fullName,
+    required String schoolSlug,
+  }) async {
+    try {
+      return await _datasource.signUp(
+        email: email,
+        password: password,
+        fullName: fullName,
+        schoolSlug: schoolSlug,
+      );
+    } on supa.AuthException catch (e) {
+      final msg = e.message.toLowerCase();
+      if (msg.contains('already registered') || msg.contains('already exists')) {
+        throw const InvalidCredentialsFailure(); // or a specific user-exists failure
+      }
+      throw UnknownAuthFailure(e.message);
+    } on PostgrestException catch (e) {
+      if (e.code == 'PGRST116') throw const ProfileNotFoundFailure();
+      throw UnknownAuthFailure(e.message);
+    } catch (e) {
+      final msg = e.toString().toLowerCase();
+      if (msg.contains('socket') ||
+          msg.contains('network') ||
+          msg.contains('connection')) {
+        throw const NetworkFailure();
+      }
+      throw UnknownAuthFailure(e.toString());
+    }
+  }
+
+  @override
   Future<void> signOut() async {
     try {
       await _datasource.signOut();

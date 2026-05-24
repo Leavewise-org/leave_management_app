@@ -168,6 +168,40 @@ create table leave_type_configs (
   created_at  timestamptz default now(),
   unique(school_id, type)
 );
+
+-- ============================================================
+-- AUTH USER CREATION TRIGGER
+-- Automatically creates a profile when a user signs up
+-- ============================================================
+create or replace function public.handle_new_user()
+returns trigger as $$
+declare
+  v_school_id uuid;
+begin
+  -- Look up the school ID from the slug provided during sign-up
+  select id into v_school_id
+  from public.schools
+  where slug = new.raw_user_meta_data->>'school_slug';
+
+  -- If a valid school was found, create the profile
+  if v_school_id is not null then
+    insert into public.profiles (id, school_id, full_name, role)
+    values (
+      new.id,
+      v_school_id,
+      new.raw_user_meta_data->>'full_name',
+      'employee'
+    );
+  end if;
+
+  return new;
+end;
+$$ language plpgsql security definer set search_path = public;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
 ```
 
 ---
@@ -185,13 +219,13 @@ alter table leave_type_configs enable row level security;
 
 -- ── HELPER: get calling user's school_id ──────────────────────
 create or replace function my_school_id()
-returns uuid language sql stable as $$
+returns uuid language sql security definer set search_path = public stable as $$
   select school_id from profiles where id = auth.uid()
 $$;
 
 -- ── HELPER: get calling user's role ───────────────────────────
 create or replace function my_role()
-returns text language sql stable as $$
+returns text language sql security definer set search_path = public stable as $$
   select role from profiles where id = auth.uid()
 $$;
 

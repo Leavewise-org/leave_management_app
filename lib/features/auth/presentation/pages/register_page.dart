@@ -2,115 +2,114 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:leave_management_app/core/router/app_router.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/constants/app_text_styles.dart';
 import '../providers/auth_provider.dart';
 
-class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({super.key});
+class RegisterPage extends ConsumerStatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  ConsumerState<LoginPage> createState() => _LoginPageState();
+  ConsumerState<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> {
+class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
+  final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
+  final _tenantCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscurePass = true;
 
   @override
   void dispose() {
+    _nameCtrl.dispose();
     _emailCtrl.dispose();
+    _tenantCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _submit() async {
-    ref.read(signInNotifierProvider.notifier).clearError();
+    ref.read(signUpNotifierProvider.notifier).clearError();
     if (!_formKey.currentState!.validate()) return;
 
-    await ref.read(signInNotifierProvider.notifier).signIn(
+    await ref.read(signUpNotifierProvider.notifier).signUp(
           email: _emailCtrl.text.trim(),
           password: _passCtrl.text,
+          fullName: _nameCtrl.text.trim(),
+          schoolSlug: _tenantCtrl.text.trim(),
         );
-        
-    if (ref.read(signInNotifierProvider).isSuccess) {
+
+    if (ref.read(signUpNotifierProvider).isSuccess) {
       TextInput.finishAutofillContext();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final signInState = ref.watch(signInNotifierProvider);
+    final signUpState = ref.watch(signUpNotifierProvider);
 
     return Scaffold(
       backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.chevron_left_rounded, color: AppColors.textPrimary, size: 28),
+          onPressed: () => context.pop(),
+        ),
+      ),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Avatar icon
-                  Center(
-                    child: Container(
-                      width: 72,
-                      height: 72,
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.primary.withValues(alpha: 0.4),
-                            blurRadius: 25,
-                            offset: const Offset(0, 10),
-                            spreadRadius: -5,
-                          ),
-                        ],
-                      ),
-                      child: const Icon(
-                        Icons.business_center_outlined,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                    ),
-                  ),
-
-                  // Titles
                   const Text(
-                    'Welcome Back',
-                    textAlign: TextAlign.center,
+                    'Create Account',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w700,
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   const Text(
-                    'Sign in to continue to Workspace',
-                    textAlign: TextAlign.center,
+                    'Join your organization\'s workspace',
                     style: TextStyle(
                       fontSize: 14,
                       color: AppColors.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
 
                   // Error banner
-                  if (signInState.failure != null) ...[
-                    _ErrorBanner(message: signInState.failure!.message),
+                  if (signUpState.failure != null) ...[
+                    _ErrorBanner(message: signUpState.failure!.message),
                     const SizedBox(height: 16),
                   ],
+
+                  // Full Name
+                  const Text('Full Name', style: AppTextStyles.formLabel),
+                  const SizedBox(height: 8),
+                  _InputField(
+                    controller: _nameCtrl,
+                    hintText: 'John Doe',
+                    keyboardType: TextInputType.name,
+                    autofillHints: const [AutofillHints.name],
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return AppStrings.fieldRequired;
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
 
                   // Email
                   const Text('Email Address', style: AppTextStyles.formLabel),
@@ -119,7 +118,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     controller: _emailCtrl,
                     hintText: 'name@school.edu',
                     keyboardType: TextInputType.emailAddress,
-                    autofillHints: const [AutofillHints.username, AutofillHints.email],
+                    autofillHints: const [AutofillHints.email],
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return AppStrings.fieldRequired;
                       if (!v.contains('@')) return AppStrings.invalidEmail;
@@ -128,14 +127,34 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
                   const SizedBox(height: 16),
 
+                  // Tenant ID
+                  const Text('School / Tenant ID', style: AppTextStyles.formLabel),
+                  const SizedBox(height: 8),
+                  _InputField(
+                    controller: _tenantCtrl,
+                    hintText: 'e.g. ananda-college',
+                    prefixIcon: const Icon(Icons.business_rounded, size: 18, color: AppColors.textTertiary),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return AppStrings.fieldRequired;
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Ask your IT admin for this isolated workspace code.',
+                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(height: 16),
+
                   // Password
                   const Text('Password', style: AppTextStyles.formLabel),
                   const SizedBox(height: 8),
                   _InputField(
                     controller: _passCtrl,
-                    hintText: '••••••••',
+                    hintText: 'Create a password',
                     obscureText: _obscurePass,
-                    autofillHints: const [AutofillHints.password],
+                    autofillHints: const [AutofillHints.newPassword],
+                    prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18, color: AppColors.textTertiary),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePass ? Icons.visibility_outlined : Icons.visibility_off_outlined,
@@ -147,33 +166,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     onFieldSubmitted: (_) => _submit(),
                     validator: (v) {
                       if (v == null || v.isEmpty) return AppStrings.fieldRequired;
+                      if (v.length < 6) return 'Password must be at least 6 characters';
                       return null;
                     },
                   ),
-
-                  const SizedBox(height: 12),
-
-                  // Forgot Password
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () {}, // TODO: forgot password flow
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: const Text(
-                        'Forgot Password?',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-
                   const SizedBox(height: 32),
 
                   // Submit Button
@@ -189,8 +185,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                         elevation: 4,
                         shadowColor: AppColors.primary.withValues(alpha: 0.2),
                       ),
-                      onPressed: signInState.isLoading ? null : _submit,
-                      child: signInState.isLoading
+                      onPressed: signUpState.isLoading ? null : _submit,
+                      child: signUpState.isLoading
                           ? const SizedBox(
                               width: 20,
                               height: 20,
@@ -200,7 +196,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                               ),
                             )
                           : const Text(
-                              'Sign In',
+                              'Create Account',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
@@ -216,18 +212,16 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text(
-                        "Don't have an account? ",
+                        "Already have an account? ",
                         style: TextStyle(
                           fontSize: 14,
                           color: AppColors.textSecondary,
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {
-                          context.push(AppRoutes.register);
-                        },
+                        onTap: () => context.pop(),
                         child: const Text(
-                          'Register',
+                          'Sign In',
                           style: TextStyle(
                             fontSize: 14,
                             color: AppColors.primary,
@@ -255,6 +249,7 @@ class _InputField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
   final bool obscureText;
+  final Widget? prefixIcon;
   final Widget? suffixIcon;
   final TextInputType? keyboardType;
   final Iterable<String>? autofillHints;
@@ -265,6 +260,7 @@ class _InputField extends StatelessWidget {
     required this.controller,
     required this.hintText,
     this.obscureText = false,
+    this.prefixIcon,
     this.suffixIcon,
     this.keyboardType,
     this.autofillHints,
@@ -303,6 +299,7 @@ class _InputField extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.primary, width: 2),
         ),
+        prefixIcon: prefixIcon,
         suffixIcon: suffixIcon,
       ),
     );
@@ -339,4 +336,3 @@ class _ErrorBanner extends StatelessWidget {
     );
   }
 }
-

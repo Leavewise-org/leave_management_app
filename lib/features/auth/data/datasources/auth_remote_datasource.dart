@@ -30,6 +30,35 @@ class AuthRemoteDatasource {
     return _fetchProfile(authUser);
   }
 
+  // ── Sign Up ──────────────────────────────────────────────────────
+
+  /// Signs up a new user with email, password, and metadata.
+  /// Throws [AuthException] from Supabase on failure.
+  Future<UserEntity> signUp({
+    required String email,
+    required String password,
+    required String fullName,
+    required String schoolSlug,
+  }) async {
+    final response = await _client.auth.signUp(
+      email: email,
+      password: password,
+      data: {
+        'full_name': fullName,
+        'school_slug': schoolSlug,
+      },
+    );
+
+    final authUser = response.user;
+    if (authUser == null) {
+      throw const AuthException('Sign-up failed: no user returned.');
+    }
+
+    // Wait a brief moment for the DB trigger to populate the profile row if using an async trigger, 
+    // or rely on it being synchronous. Assuming synchronous for now.
+    return _fetchProfile(authUser);
+  }
+
   // ── Sign Out ─────────────────────────────────────────────────────
 
   Future<void> signOut() => _client.auth.signOut();

@@ -10,6 +10,15 @@ abstract interface class AuthRepository {
   /// Throws [AuthException] on failure.
   Future<UserEntity> signIn({required String email, required String password});
 
+  /// Registers a new user with [email], [password], [fullName], and [schoolSlug].
+  /// Throws [AuthException] on failure.
+  Future<UserEntity> signUp({
+    required String email,
+    required String password,
+    required String fullName,
+    required String schoolSlug,
+  });
+
   /// Signs the user out and clears the local session.
   Future<void> signOut();
 
