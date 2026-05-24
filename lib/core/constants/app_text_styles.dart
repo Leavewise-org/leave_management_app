@@ -92,7 +92,7 @@ class AppTextStyles {
   // ── Form ─────────────────────────────────────────────────────────
   static const TextStyle formLabel = TextStyle(
     fontSize: 11,
-    fontWeight: FontWeight.w500,
+    fontWeight: FontWeight.w600,
     color: AppColors.textSecondary,
   );
 

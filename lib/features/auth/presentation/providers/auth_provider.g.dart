@@ -6,25 +6,40 @@ part of 'auth_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$supabaseClientHash() => r'de6240783d7dddb57e07d034deb0ddf8e2fcc3e4';
+String _$firebaseAuthHash() => r'8f84097cccd00af817397c1715c5f537399ba780';
 
-/// See also [supabaseClient].
-@ProviderFor(supabaseClient)
-final supabaseClientProvider = AutoDisposeProvider<SupabaseClient>.internal(
-  supabaseClient,
-  name: r'supabaseClientProvider',
-  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
-      ? null
-      : _$supabaseClientHash,
+/// See also [firebaseAuth].
+@ProviderFor(firebaseAuth)
+final firebaseAuthProvider = AutoDisposeProvider<FirebaseAuth>.internal(
+  firebaseAuth,
+  name: r'firebaseAuthProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product') ? null : _$firebaseAuthHash,
   dependencies: null,
   allTransitiveDependencies: null,
 );
 
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
-typedef SupabaseClientRef = AutoDisposeProviderRef<SupabaseClient>;
+typedef FirebaseAuthRef = AutoDisposeProviderRef<FirebaseAuth>;
+String _$firestoreHash() => r'597b1a9eb96f2fae51f5b578f4b5debe4f6d30c6';
+
+/// See also [firestore].
+@ProviderFor(firestore)
+final firestoreProvider = AutoDisposeProvider<FirebaseFirestore>.internal(
+  firestore,
+  name: r'firestoreProvider',
+  debugGetCreateSourceHash:
+      const bool.fromEnvironment('dart.vm.product') ? null : _$firestoreHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef FirestoreRef = AutoDisposeProviderRef<FirebaseFirestore>;
 String _$authRemoteDatasourceHash() =>
-    r'9462d918ea05a6702723849347486816f58cb1f5';
+    r'7ea7a3c5c7d20adfe0655e64ed97416e90bf5bcd';
 
 /// See also [authRemoteDatasource].
 @ProviderFor(authRemoteDatasource)
@@ -94,5 +109,21 @@ final signInNotifierProvider =
 );
 
 typedef _$SignInNotifier = AutoDisposeNotifier<SignInState>;
+String _$signUpNotifierHash() => r'829e7f31e273618dfacd864335b362d0ffc98503';
+
+/// See also [SignUpNotifier].
+@ProviderFor(SignUpNotifier)
+final signUpNotifierProvider =
+    AutoDisposeNotifierProvider<SignUpNotifier, SignInState>.internal(
+  SignUpNotifier.new,
+  name: r'signUpNotifierProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$signUpNotifierHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$SignUpNotifier = AutoDisposeNotifier<SignInState>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

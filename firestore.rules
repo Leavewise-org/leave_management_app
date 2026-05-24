@@ -1,0 +1,72 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ── HELPER FUNCTIONS ──────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserProfile() {
+      return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data;
+    }
+    
+    function isMySchool(schoolId) {
+      return getUserProfile().school_id == schoolId;
+    }
+    
+    function getMyRole() {
+      return getUserProfile().role;
+    }
+    
+    // ── PROFILES ──────────────────────────────
+    match /profiles/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        getMyRole() == 'super_admin' ||
+        (isMySchool(resource.data.schoolId) && getMyRole() in ['manager', 'school_admin'])
+      );
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ── LEAVE REQUESTS ────────────────────────
+    match /leave_requests/{requestId} {
+      allow read: if isAuthenticated() && (
+        getMyRole() == 'super_admin' ||
+        getMyRole() in ['manager', 'school_admin'] ||
+        resource.data.userId == request.auth.uid
+      );
+      
+      allow create: if isAuthenticated() && 
+        request.resource.data.userId == request.auth.uid;
+        
+      allow update: if isAuthenticated() && 
+        getMyRole() in ['manager', 'school_admin'];
+    }
+
+    // ── LEAVE BALANCES ────────────────────────
+    match /leave_balances/{balanceId} {
+      allow read: if isAuthenticated() && (
+        getMyRole() == 'super_admin' ||
+        (isMySchool(resource.data.schoolId) && getMyRole() in ['manager', 'school_admin']) ||
+        (isMySchool(resource.data.schoolId) && resource.data.userId == request.auth.uid)
+      );
+    }
+
+    // ── LEAVE TYPE CONFIGS ────────────────────
+    match /leave_type_configs/{configId} {
+      allow read: if isAuthenticated() && isMySchool(resource.data.schoolId);
+      allow write: if isAuthenticated() && 
+        isMySchool(resource.data.schoolId) && 
+        getMyRole() in ['school_admin', 'super_admin'];
+    }
+
+    // ── SCHOOLS ───────────────────────────────
+    match /schools/{schoolId} {
+      allow read: if isAuthenticated() && (
+        getMyRole() == 'super_admin' || isMySchool(schoolId)
+      );
+      allow write: if isAuthenticated() && getMyRole() == 'super_admin';
+    }
+  }
+}
