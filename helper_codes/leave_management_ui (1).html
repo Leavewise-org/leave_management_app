@@ -1,0 +1,1349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Leave Management UI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+    <style>
+        :root {
+            --primary: #4F46E5; /* Indigo 600 */
+            --primary-light: #EEF2FF; /* Indigo 50 */
+            --primary-dark: #4338CA;
+            --success: #10B981;
+            --success-light: #ECFDF5;
+            --warning: #F59E0B;
+            --warning-light: #FFFBEB;
+            --danger: #EF4444;
+            --danger-light: #FEF2F2;
+            --surface: #FFFFFF;
+            --background: #F9FAFB; /* Gray 50 */
+            --text-main: #111827; /* Gray 900 */
+            --text-secondary: #6B7280; /* Gray 500 */
+            --border: #E5E7EB; /* Gray 200 */
+            --border-light: #F3F4F6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #E5E7EB; /* Darker background for the presentation shell */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            color: var(--text-main);
+        }
+
+        /* --- Presentation Shell --- */
+        .app-shell {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .screen-nav {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 200px;
+            background: white;
+            padding: 24px;
+            border-radius: 24px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+        }
+
+        .nav-label {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-top: 16px;
+            margin-bottom: 4px;
+            padding-left: 12px;
+        }
+        .nav-label:first-child { margin-top: 0; }
+
+        .nav-btn {
+            background: transparent;
+            border: none;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .nav-btn:hover {
+            background: var(--background);
+            color: var(--text-main);
+        }
+
+        .nav-btn.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .nav-btn i { font-size: 18px; }
+
+        /* --- Phone Mockup --- */
+        .phone-frame {
+            width: 375px;
+            height: 812px; /* iPhone X dimensions */
+            background: #000;
+            border-radius: 48px;
+            padding: 12px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            position: relative;
+        }
+
+        .phone-notch {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 140px;
+            height: 28px;
+            background: #000;
+            border-bottom-left-radius: 20px;
+            border-bottom-right-radius: 20px;
+            z-index: 20;
+        }
+        
+        .phone-screen {
+            background: var(--background);
+            border-radius: 36px;
+            overflow: hidden;
+            height: 100%;
+            width: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            animation: fadeIn 0.3s ease;
+        }
+        .screen.active { display: flex; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- Global App Styles --- */
+        
+        /* Status Bar (Mock) */
+        .status-bar {
+            padding: 14px 24px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 10;
+            color: var(--text-main);
+            background: transparent;
+        }
+        .status-bar.dark-text { color: var(--text-main); }
+        .status-bar.light-text { color: white; }
+
+        /* Headers */
+        .app-header {
+            padding: 16px 24px 24px;
+            background: var(--primary);
+            color: white;
+            border-bottom-left-radius: 24px;
+            border-bottom-right-radius: 24px;
+        }
+        .app-header-light {
+            padding: 16px 24px;
+            background: transparent;
+            color: var(--text-main);
+        }
+
+        /* Scrollable Content Area */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        /* Hide scrollbar for webkit */
+        .content-area::-webkit-scrollbar { display: none; }
+        .content-area { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Cards */
+        .ui-card {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+            border: 1px solid var(--border-light);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+        .section-action {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--primary);
+            cursor: pointer;
+        }
+
+        /* Bottom Navigation */
+        .bottom-nav {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid var(--border-light);
+            display: flex;
+            padding: 12px 24px 24px; /* Extra bottom padding for iPhone indicator area */
+            justify-content: space-between;
+        }
+        .bn-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            width: 50px;
+            transition: color 0.2s;
+        }
+        .bn-item i { font-size: 24px; }
+        .bn-item span { font-size: 10px; font-weight: 500; }
+        .bn-item.active { color: var(--primary); }
+        
+        /* Common Components */
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 16px;
+            border: 2px solid white;
+        }
+        
+        .badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--danger);
+            color: white;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid var(--primary);
+        }
+
+        .status-pill {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .status-approved { background: var(--success-light); color: var(--success); }
+        .status-pending { background: var(--warning-light); color: var(--warning); }
+        .status-rejected { background: var(--danger-light); color: var(--danger); }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            cursor: pointer;
+            border: none;
+            position: relative;
+        }
+        .icon-btn-light {
+            background: var(--background);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            padding: 16px;
+            font-size: 15px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2);
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .btn-primary:active {
+            transform: scale(0.98);
+            box-shadow: none;
+        }
+
+        /* --- Screen Specific Styles --- */
+
+        /* Dashboard */
+        .balance-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .balance-card {
+            border-radius: 16px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .bc-annual { background: var(--primary-light); }
+        .bc-sick { background: var(--success-light); }
+        .bc-comp { background: var(--warning-light); }
+        .bc-unpaid { background: var(--background); border: 1px solid var(--border-light); }
+        
+        .bc-header { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; }
+        .bc-annual .bc-header { color: var(--primary-dark); }
+        .bc-sick .bc-header { color: #047857; }
+        .bc-comp .bc-header { color: #B45309; }
+        .bc-unpaid .bc-header { color: var(--text-secondary); }
+
+        .bc-value { font-size: 28px; font-weight: 700; line-height: 1; }
+        .bc-annual .bc-value { color: var(--primary); }
+        .bc-sick .bc-value { color: var(--success); }
+        .bc-comp .bc-value { color: var(--warning); }
+        .bc-unpaid .bc-value { color: var(--text-secondary); }
+
+        .bc-sub { font-size: 11px; font-weight: 500; opacity: 0.8; }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+        .qa-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .qa-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .qa-blue { background: var(--primary-light); color: var(--primary); }
+        .qa-green { background: var(--success-light); color: var(--success); }
+        .qa-amber { background: var(--warning-light); color: var(--warning); }
+        .qa-gray { background: var(--background); color: var(--text-secondary); border: 1px solid var(--border-light); }
+        .qa-item span { font-size: 11px; font-weight: 500; text-align: center; color: var(--text-main); }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+        .list-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .li-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .li-content { flex: 1; }
+        .li-title { font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 4px; }
+        .li-subtitle { font-size: 12px; color: var(--text-secondary); }
+
+        /* Apply Leave */
+        .form-group { margin-bottom: 16px; }
+        .form-label { font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 8px; display: block; }
+        
+        .chip-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        .chip {
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .chip.active {
+            background: var(--primary-light);
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .chip i { font-size: 18px; }
+
+        .input-field {
+            background: var(--background);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 14px;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            cursor: text;
+        }
+        .input-field.selected {
+            background: var(--surface);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-light);
+        }
+        .input-field i { color: var(--text-secondary); }
+
+        .input-field input {
+            background: transparent;
+            border: none;
+            outline: none;
+            width: 100%;
+            color: inherit;
+            font-family: inherit;
+            font-size: inherit;
+        }
+        .input-field input::placeholder {
+            color: var(--text-secondary);
+            opacity: 0.7;
+        }
+
+        textarea.input-field {
+            min-height: 100px;
+            align-items: flex-start;
+            font-family: inherit;
+            resize: none;
+        }
+
+        /* Stats Row */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .stat-box {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 16px 12px;
+            text-align: center;
+            border: 1px solid var(--border-light);
+        }
+        .stat-val { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+        .stat-lbl { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+
+        /* Calendar */
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .cal-month { font-size: 18px; font-weight: 700; }
+        .cal-nav { display: flex; gap: 8px; }
+        .cal-nav-btn { width: 32px; height: 32px; border-radius: 8px; background: var(--background); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+            text-align: center;
+        }
+        .cal-day-name { font-size: 12px; font-weight: 600; color: var(--text-secondary); padding-bottom: 8px; }
+        .cal-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 500;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+        .cal-cell.empty { color: transparent; pointer-events: none; }
+        .cal-cell.today { background: var(--primary); color: white; box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3); }
+        .cal-cell.leave { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+        .cal-cell.holiday { background: var(--warning-light); color: var(--warning); font-weight: 600; }
+
+        .cal-legend {
+            display: flex;
+            gap: 16px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border-light);
+            justify-content: center;
+        }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+        .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+        /* Approvals */
+        .approval-card {
+            background: var(--surface);
+            border-radius: 20px;
+            padding: 16px;
+            border: 1px solid var(--border-light);
+            border-left: 4px solid var(--warning);
+            margin-bottom: 12px;
+        }
+        .ac-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
+        .ac-user { display: flex; align-items: center; gap: 12px; }
+        .ac-name { font-size: 15px; font-weight: 600; color: var(--text-main); }
+        .ac-role { font-size: 12px; color: var(--text-secondary); }
+        
+        .ac-details {
+            background: var(--background);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 16px;
+            font-size: 13px;
+        }
+        .ac-detail-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .ac-detail-row:last-child { margin-bottom: 0; }
+        .ac-detail-row i { color: var(--text-secondary); font-size: 16px; }
+
+        .ac-actions { display: flex; gap: 12px; }
+        .btn-outline {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        .btn-reject { background: white; border: 1px solid var(--danger); color: var(--danger); }
+        .btn-approve { background: var(--success); border: 1px solid var(--success); color: white; }
+
+        /* Team */
+        .search-bar {
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: white;
+            margin-top: 16px;
+        }
+        .search-bar input {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 14px;
+            width: 100%;
+        }
+        .search-bar input::placeholder { color: rgba(255,255,255,0.7); }
+        .search-bar input:focus { outline: none; }
+
+        .team-avatar {
+            width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; color: white; font-size: 14px;
+        }
+
+        /* Reports */
+        .progress-bar-container { margin-bottom: 16px; }
+        .progress-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px; font-weight: 500;}
+        .progress-track { height: 8px; border-radius: 4px; background: var(--background); overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="app-shell">
+    <!-- Navigation Panel for Prototype -->
+    <div class="screen-nav">
+        <div class="nav-label">Auth Flow</div>
+        <button class="nav-btn active" data-target="login" onclick="showScreen('login')">
+            <i class="ti ti-login"></i> Login
+        </button>
+        <button class="nav-btn" data-target="register" onclick="showScreen('register')">
+            <i class="ti ti-user-plus"></i> Register
+        </button>
+
+        <div class="nav-label">Employee</div>
+        <button class="nav-btn" data-target="dashboard" onclick="showScreen('dashboard')">
+            <i class="ti ti-layout-dashboard"></i> Dashboard
+        </button>
+        <button class="nav-btn" data-target="apply" onclick="showScreen('apply')">
+            <i class="ti ti-calendar-plus"></i> Apply Leave
+        </button>
+        <button class="nav-btn" data-target="history" onclick="showScreen('history')">
+            <i class="ti ti-history"></i> My History
+        </button>
+        <button class="nav-btn" data-target="calendar" onclick="showScreen('calendar')">
+            <i class="ti ti-calendar-event"></i> Calendar
+        </button>
+        
+        <div class="nav-label">Manager</div>
+        <button class="nav-btn" data-target="approvals" onclick="showScreen('approvals')">
+            <i class="ti ti-clipboard-check"></i> Approvals
+        </button>
+        <button class="nav-btn" data-target="team" onclick="showScreen('team')">
+            <i class="ti ti-users-group"></i> Team View
+        </button>
+        <button class="nav-btn" data-target="report" onclick="showScreen('report')">
+            <i class="ti ti-chart-pie"></i> Reports
+        </button>
+    </div>
+
+    <!-- Phone Mockup -->
+    <div class="phone-frame">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+
+            <!-- ================= SCREEN: LOGIN ================= -->
+            <div class="screen active" id="screen-login">
+                <div class="status-bar dark-text" style="padding-bottom: 0;">
+                    <span>9:41</span>
+                    <div style="display:flex; gap:4px"><i class="ti ti-reception-4"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-filled"></i></div>
+                </div>
+                <div class="content-area" style="justify-content: center; padding-bottom: 60px;">
+                    <div style="text-align: center; margin-bottom: 32px;">
+                        <div class="avatar" style="width: 72px; height: 72px; margin: 0 auto 16px; background: var(--primary); color: white; font-size: 32px; border: none; box-shadow: 0 10px 25px -5px rgba(79,70,229,0.4);">
+                            <i class="ti ti-briefcase"></i>
+                        </div>
+                        <h1 style="font-size: 24px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Welcome Back</h1>
+                        <p style="font-size: 14px; color: var(--text-secondary);">Sign in to continue to Workspace</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <div class="input-field">
+                            <input type="email" placeholder="name@school.edu">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 12px;">
+                        <label class="form-label">Password</label>
+                        <div class="input-field">
+                            <input type="password" placeholder="••••••••">
+                            <i class="ti ti-eye"></i>
+                        </div>
+                    </div>
+
+                    <div style="text-align: right; margin-bottom: 32px;">
+                        <a href="#" style="font-size: 13px; color: var(--primary); font-weight: 600; text-decoration: none;">Forgot Password?</a>
+                    </div>
+
+                    <button class="btn-primary" onclick="showScreen('dashboard')" style="margin-bottom: 24px;">Sign In</button>
+
+                    <div style="text-align: center; font-size: 14px; color: var(--text-secondary);">
+                        Don't have an account? <a href="#" onclick="showScreen('register')" style="color: var(--primary); font-weight: 600; text-decoration: none;">Register</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= SCREEN: REGISTER ================= -->
+            <div class="screen" id="screen-register">
+                <div class="status-bar dark-text" style="padding-bottom: 0;">
+                    <span>9:41</span>
+                    <div style="display:flex; gap:4px"><i class="ti ti-reception-4"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-filled"></i></div>
+                </div>
+                
+                <div class="app-header-light" style="padding-bottom: 8px; padding-top: 8px;">
+                    <button class="icon-btn-light" onclick="showScreen('login')" style="margin-bottom: 16px;"><i class="ti ti-chevron-left"></i></button>
+                    <h1 style="font-size: 24px; font-weight: 700; color: var(--text-main);">Create Account</h1>
+                    <p style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;">Join your organization's workspace</p>
+                </div>
+
+                <div class="content-area" style="padding-top: 8px;">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <div class="input-field">
+                            <input type="text" placeholder="John Doe">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <div class="input-field">
+                            <input type="email" placeholder="name@school.edu">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">School / Tenant ID</label>
+                        <div class="input-field">
+                            <input type="text" placeholder="e.g. ananda-college">
+                            <i class="ti ti-building"></i>
+                        </div>
+                        <span style="font-size: 11px; color: var(--text-secondary); margin-top: 6px; display: block;">Ask your IT admin for this isolated workspace code.</span>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 32px;">
+                        <label class="form-label">Password</label>
+                        <div class="input-field">
+                            <input type="password" placeholder="Create a password">
+                            <i class="ti ti-eye"></i>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" onclick="showScreen('dashboard')" style="margin-bottom: 24px;">Create Account</button>
+
+                    <div style="text-align: center; font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">
+                        Already have an account? <a href="#" onclick="showScreen('login')" style="color: var(--primary); font-weight: 600; text-decoration: none;">Sign In</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= SCREEN: DASHBOARD ================= -->
+            <div class="screen" id="screen-dashboard">
+                <div class="app-header">
+                    <div class="status-bar light-text" style="padding:0; margin-bottom: 24px;">
+                        <span>9:41</span>
+                        <div style="display:flex; gap:4px">
+                            <i class="ti ti-reception-4" style="font-size:14px"></i>
+                            <i class="ti ti-wifi" style="font-size:14px"></i>
+                            <i class="ti ti-battery-filled" style="font-size:14px"></i>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <p style="font-size: 13px; opacity: 0.8; margin-bottom: 2px;">Good morning,</p>
+                            <h1 style="font-size: 20px; font-weight: 700;">Sajith Sampath</h1>
+                        </div>
+                        <div class="avatar" style="position: relative;">
+                            SR
+                            <div class="badge">2</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="content-area">
+                    <!-- Balance Cards -->
+                    <div>
+                        <div class="section-header">
+                            <h2 class="section-title">My Balances</h2>
+                            <span class="section-action">Details</span>
+                        </div>
+                        <div class="balance-grid">
+                            <div class="balance-card bc-annual">
+                                <div class="bc-header"><i class="ti ti-sun"></i> Annual</div>
+                                <div>
+                                    <div class="bc-value">12</div>
+                                    <div class="bc-sub bc-annual">of 20 days left</div>
+                                </div>
+                            </div>
+                            <div class="balance-card bc-sick">
+                                <div class="bc-header"><i class="ti ti-heart-rate-monitor"></i> Sick</div>
+                                <div>
+                                    <div class="bc-value">07</div>
+                                    <div class="bc-sub bc-sick">of 10 days left</div>
+                                </div>
+                            </div>
+                            <div class="balance-card bc-comp">
+                                <div class="bc-header"><i class="ti ti-clock-hour-4"></i> Comp Off</div>
+                                <div>
+                                    <div class="bc-value">02</div>
+                                    <div class="bc-sub bc-comp">days earned</div>
+                                </div>
+                            </div>
+                            <div class="balance-card bc-unpaid">
+                                <div class="bc-header"><i class="ti ti-cash-off"></i> Unpaid</div>
+                                <div>
+                                    <div class="bc-value">—</div>
+                                    <div class="bc-sub bc-unpaid">Available</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="ui-card" style="padding: 16px;">
+                        <div class="quick-actions">
+                            <div class="qa-item" onclick="showScreen('apply', document.querySelectorAll('.nav-btn')[1])">
+                                <div class="qa-icon qa-blue"><i class="ti ti-plus"></i></div>
+                                <span>Apply</span>
+                            </div>
+                            <div class="qa-item">
+                                <div class="qa-icon qa-green"><i class="ti ti-calendar-check"></i></div>
+                                <span>Status</span>
+                            </div>
+                            <div class="qa-item" onclick="showScreen('history', document.querySelectorAll('.nav-btn')[2])">
+                                <div class="qa-icon qa-amber"><i class="ti ti-history"></i></div>
+                                <span>History</span>
+                            </div>
+                            <div class="qa-item">
+                                <div class="qa-icon qa-gray"><i class="ti ti-settings"></i></div>
+                                <span>Policy</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent -->
+                    <div>
+                        <div class="section-header">
+                            <h2 class="section-title">Recent Requests</h2>
+                        </div>
+                        <div class="ui-card" style="padding: 0 16px;">
+                            <div class="list-item">
+                                <div class="li-icon qa-blue"><i class="ti ti-sun"></i></div>
+                                <div class="li-content">
+                                    <div class="li-title">Annual Leave</div>
+                                    <div class="li-subtitle">Apr 28 - Apr 30 (3 Days)</div>
+                                </div>
+                                <div class="status-pill status-approved">Approved</div>
+                            </div>
+                            <div class="list-item">
+                                <div class="li-icon qa-gray"><i class="ti ti-briefcase"></i></div>
+                                <div class="li-content">
+                                    <div class="li-title">Casual Leave</div>
+                                    <div class="li-subtitle">May 20 (1 Day)</div>
+                                </div>
+                                <div class="status-pill status-pending">Pending</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bottom-nav">
+                    <div class="bn-item active"><i class="ti ti-layout-dashboard"></i><span>Home</span></div>
+                    <div class="bn-item" onclick="showScreen('apply', document.querySelectorAll('.nav-btn')[1])"><i class="ti ti-calendar-plus"></i><span>Apply</span></div>
+                    <div class="bn-item" onclick="showScreen('calendar', document.querySelectorAll('.nav-btn')[3])"><i class="ti ti-calendar-event"></i><span>Calendar</span></div>
+                    <div class="bn-item"><i class="ti ti-user"></i><span>Profile</span></div>
+                </div>
+            </div>
+
+            <!-- ================= SCREEN: APPLY LEAVE ================= -->
+            <div class="screen" id="screen-apply">
+                <div class="status-bar dark-text">
+                    <span>9:41</span>
+                    <div style="display:flex; gap:4px"><i class="ti ti-reception-4"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-filled"></i></div>
+                </div>
+                <div class="app-header-light" style="display: flex; align-items: center; gap: 16px; padding-bottom: 8px;">
+                    <button class="icon-btn-light" onclick="showScreen('dashboard', document.querySelectorAll('.nav-btn')[0])"><i class="ti ti-chevron-left"></i></button>
+                    <h1 style="font-size: 20px; font-weight: 700;">New Request</h1>
+                </div>
+
+                <div class="content-area" style="padding-top: 10px;">
+                    <div class="form-group">
+                        <label class="form-label">Leave Type</label>
+                        <div class="chip-grid">
+                            <div class="chip active"><i class="ti ti-sun"></i> Annual</div>
+                            <div class="chip"><i class="ti ti-heart-rate-monitor" style="color:var(--success)"></i> Sick</div>
+                            <div class="chip"><i class="ti ti-briefcase" style="color:var(--warning)"></i> Casual</div>
+                            <div class="chip"><i class="ti ti-clock-hour-4" style="color:var(--text-secondary)"></i> Comp Off</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Date & Duration</label>
+                        <div style="display: flex; gap: 12px; margin-bottom: 12px;">
+                            <div class="input-field selected" style="flex:1">
+                                <span>May 21, 2026</span>
+                                <i class="ti ti-calendar"></i>
+                            </div>
+                            <div class="input-field" style="flex:1; background:var(--surface)">
+                                <span style="color:var(--text-secondary)">End Date</span>
+                                <i class="ti ti-calendar"></i>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 12px;">
+                            <div class="chip active" style="flex:1; justify-content:center">Full Day</div>
+                            <div class="chip" style="flex:1; justify-content:center">Half Day</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Reason</label>
+                        <textarea class="input-field" placeholder="Briefly describe your reason..."></textarea>
+                    </div>
+
+                    <div class="ui-card" style="padding: 16px; display: flex; align-items: center; gap: 16px; margin-bottom: 20px;">
+                        <div class="qa-icon qa-gray"><i class="ti ti-paperclip"></i></div>
+                        <div style="flex: 1;">
+                            <div style="font-size: 14px; font-weight: 600;">Attachment</div>
+                            <div style="font-size: 12px; color: var(--text-secondary);">Medical cert. (Optional)</div>
+                        </div>
+                        <button style="background:var(--primary-light); color:var(--primary); border:none; padding:8px 16px; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer;">Upload</button>
+                    </div>
+
+                    <button class="btn-primary" style="margin-top: auto; margin-bottom: 10px;">Submit Request</button>
+                </div>
+            </div>
+
+            <!-- ================= SCREEN: HISTORY ================= -->
+            <div class="screen" id="screen-history">
+                <div class="status-bar dark-text">
+                    <span>9:41</span>
+                    <div style="display:flex; gap:4px"><i class="ti ti-reception-4"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-filled"></i></div>
+                </div>
+                <div class="app-header-light" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <button class="icon-btn-light" onclick="showScreen('dashboard', document.querySelectorAll('.nav-btn')[0])"><i class="ti ti-chevron-left"></i></button>
+                        <h1 style="font-size: 20px; font-weight: 700;">My History</h1>
+                    </div>
+                    <button class="icon-btn-light"><i class="ti ti-filter"></i></button>
+                </div>
+
+                <div class="content-area" style="padding-top: 0;">
+                    <div class="stats-row">
+                        <div class="stat-box">
+                            <div class="stat-val" style="color:var(--text-main)">08</div>
+                            <div class="stat-lbl" style="color:var(--text-secondary)">Used</div>
+                        </div>
+                        <div class="stat-box" style="background:var(--success-light); border-color:var(--success-light)">
+                            <div class="stat-val" style="color:var(--success)">14</div>
+                            <div class="stat-lbl" style="color:var(--success)">Left</div>
+                        </div>
+                        <div class="stat-box" style="background:var(--warning-light); border-color:var(--warning-light)">
+                            <div class="stat-val" style="color:var(--warning)">01</div>
+                            <div class="stat-lbl" style="color:var(--warning)">Pending</div>
+                        </div>
+                    </div>
+
+                    <div class="ui-card" style="padding: 0 16px;">
+                        <div class="list-item">
+                            <div class="li-icon qa-gray"><i class="ti ti-briefcase"></i></div>
+                            <div class="li-content">
+                                <div class="li-title">Casual Leave</div>
+                                <div class="li-subtitle">May 20 (1 Day)</div>
+                            </div>
+                            <div class="status-pill status-pending">Pending</div>
+                        </div>
+                        <div class="list-item">
+                            <div class="li-icon qa-blue"><i class="ti ti-sun"></i></div>
+                            <div class="li-content">
+                                <div class="li-title">Annual Leave</div>
+                                <div class="li-subtitle">Apr 28 - Apr 30 (3 Days)</div>
+                            </div>
+                            <div class="status-pill status-approved">Approved</div>
+                        </div>
+                        <div class="list-item">
+                            <div class="li-icon qa-blue"><i class="ti ti-sun"></i></div>
+                            <div class="li-content">
+                                <div class="li-title">Annual Leave</div>
+                                <div class="li-subtitle">May 01 - May 07 (5 Days)</div>
+                            </div>
+                            <div class="status-pill status-rejected">Rejected</div>
+                        </div>
+                        <div class="list-item">
+                            <div class="li-icon qa-green"><i class="ti ti-heart-rate-monitor"></i></div>
+                            <div class="li-content">
+                                <div class="li-title">Sick Leave</div>
+                                <div class="li-subtitle">Mar 12 - Mar 13 (2 Days)</div>
+                            </div>
+                            <div class="status-pill status-approved">Approved</div>
+                        </div>
+                    </div>
+                </div>
+                 <div class="bottom-nav">
+                    <div class="bn-item" onclick="showScreen('dashboard', document.querySelectorAll('.nav-btn')[0])"><i class="ti ti-layout-dashboard"></i><span>Home</span></div>
+                    <div class="bn-item" onclick="showScreen('apply', document.querySelectorAll('.nav-btn')[1])"><i class="ti ti-calendar-plus"></i><span>Apply</span></div>
+                    <div class="bn-item" onclick="showScreen('calendar', document.querySelectorAll('.nav-btn')[3])"><i class="ti ti-calendar-event"></i><span>Calendar</span></div>
+                    <div class="bn-item active"><i class="ti ti-history"></i><span>History</span></div>
+                </div>
+            </div>
+
+            <!-- ================= SCREEN: CALENDAR ================= -->
+            <div class="screen" id="screen-calendar">
+                 <div class="status-bar dark-text">
+                    <span>9:41</span>
+                    <div style="display:flex; gap:4px"><i class="ti ti-reception-4"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-filled"></i></div>
+                </div>
+                
+                <div class="content-area" style="padding-top: 10px;">
+                    <div class="ui-card">
+                        <div class="calendar-header">
+                            <div class="cal-month">May 2026</div>
+                            <div class="cal-nav">
+                                <div class="cal-nav-btn"><i class="ti ti-chevron-left"></i></div>
+                                <div class="cal-nav-btn"><i class="ti ti-chevron-right"></i></div>
+                            </div>
+                        </div>
+                        <div class="cal-grid">
+                            <div class="cal-day-name">Su</div><div class="cal-day-name">Mo</div><div class="cal-day-name">Tu</div><div class="cal-day-name">We</div><div class="cal-day-name">Th</div><div class="cal-day-name">Fr</div><div class="cal-day-name">Sa</div>
+                            
+                            <div class="cal-cell empty"></div><div class="cal-cell empty"></div><div class="cal-cell empty"></div><div class="cal-cell empty"></div><div class="cal-cell">1</div><div class="cal-cell holiday">2</div><div class="cal-cell">3</div>
+                            <div class="cal-cell">4</div><div class="cal-cell">5</div><div class="cal-cell">6</div><div class="cal-cell">7</div><div class="cal-cell">8</div><div class="cal-cell">9</div><div class="cal-cell">10</div>
+                            <div class="cal-cell">11</div><div class="cal-cell">12</div><div class="cal-cell">13</div><div class="cal-cell">14</div><div class="cal-cell">15</div><div class="cal-cell today">16</div><div class="cal-cell">17</div>
+                            <div class="cal-cell">18</div><div class="cal-cell">19</div><div class="cal-cell leave">20</div><div class="cal-cell leave">21</div><div class="cal-cell">22</div><div class="cal-cell">23</div><div class="cal-cell">24</div>
+                            <div class="cal-cell">25</div><div class="cal-cell">26</div><div class="cal-cell holiday">27</div><div class="cal-cell">28</div><div class="cal-cell">29</div><div class="cal-cell">30</div><div class="cal-cell">31</div>
+                        </div>
+                        <div class="cal-legend">
+                            <div class="legend-item"><div class="legend-dot" style="background:var(--primary)"></div> Today</div>
+                            <div class="legend-item"><div class="legend-dot" style="background:var(--primary-light); border:1px solid var(--primary)"></div> My Leave</div>
+                            <div class="legend-item"><div class="legend-dot" style="background:var(--warning)"></div> Holiday</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="section-header"><h2 class="section-title">Upcoming</h2></div>
+                        <div class="ui-card" style="padding: 0 16px;">
+                             <div class="list-item">
+                                <div class="li-icon qa-amber"><i class="ti ti-confetti"></i></div>
+                                <div class="li-content">
+                                    <div class="li-title">Vesak Holiday</div>
+                                    <div class="li-subtitle">May 2 · Public Holiday</div>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <div class="li-icon qa-gray"><i class="ti ti-briefcase"></i></div>
+                                <div class="li-content">
+                                    <div class="li-title">Casual Leave</div>
+                                    <div class="li-subtitle">May 20 · Pending</div>
+                                </div>
+                            </div>
+                            <div class="list-item">
+                                <div class="li-icon qa-amber"><i class="ti ti-flag"></i></div>
+                                <div class="li-content">
+                                    <div class="li-title">National Day</div>
+                                    <div class="li-subtitle">May 27 · Public Holiday</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                 <div class="bottom-nav">
+                    <div class="bn-item" onclick="showScreen('dashboard', document.querySelectorAll('.nav-btn')[0])"><i class="ti ti-layout-dashboard"></i><span>Home</span></div>
+                    <div class="bn-item" onclick="showScreen('apply', document.querySelectorAll('.nav-btn')[1])"><i class="ti ti-calendar-plus"></i><span>Apply</span></div>
+                    <div class="bn-item active"><i class="ti ti-calendar-event"></i><span>Calendar</span></div>
+                    <div class="bn-item"><i class="ti ti-user"></i><span>Profile</span></div>
+                </div>
+            </div>
+
+            <!-- ================= SCREEN: MANAGER APPROVALS ================= -->
+            <div class="screen" id="screen-approvals">
+                 <div class="status-bar dark-text">
+                    <span>9:41</span>
+                    <div style="display:flex; gap:4px"><i class="ti ti-reception-4"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-filled"></i></div>
+                </div>
+                <div class="app-header-light" style="padding-bottom: 8px;">
+                    <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Approvals</h1>
+                    <div class="chip active" style="display:inline-flex; padding:6px 12px; font-size:12px; border:none; background:var(--warning-light); color:var(--warning)">
+                        <i class="ti ti-clock" style="font-size:14px"></i> 3 Pending Requests
+                    </div>
+                </div>
+
+                <div class="content-area" style="padding-top: 10px;">
+                    
+                    <div class="approval-card">
+                        <div class="ac-header">
+                            <div class="ac-user">
+                                <div class="team-avatar" style="background:#0EA5E9">NP</div>
+                                <div>
+                                    <div class="ac-name">Nuwan Perera</div>
+                                    <div class="ac-role">Backend Developer</div>
+                                </div>
+                            </div>
+                            <div class="status-pill status-pending">3 Days</div>
+                        </div>
+                        <div class="ac-details">
+                            <div class="ac-detail-row"><i class="ti ti-sun" style="color:var(--primary)"></i> Annual Leave</div>
+                            <div class="ac-detail-row"><i class="ti ti-calendar"></i> May 22 – May 24, 2026</div>
+                            <div class="ac-detail-row"><i class="ti ti-message-2"></i> Family vacation trip</div>
+                        </div>
+                        <div class="ac-actions">
+                            <button class="btn-outline btn-reject"><i class="ti ti-x"></i> Reject</button>
+                            <button class="btn-outline btn-approve"><i class="ti ti-check"></i> Approve</button>
+                        </div>
+                    </div>
+
+                    <div class="approval-card">
+                        <div class="ac-header">
+                            <div class="ac-user">
+                                <div class="team-avatar" style="background:#F43F5E">AF</div>
+                                <div>
+                                    <div class="ac-name">Amali Fernando</div>
+                                    <div class="ac-role">QA Engineer</div>
+                                </div>
+                            </div>
+                            <div class="status-pill status-pending" style="background:var(--success-light); color:var(--success)">2 Days</div>
+                        </div>
+                        <div class="ac-details">
+                            <div class="ac-detail-row"><i class="ti ti-heart-rate-monitor" style="color:var(--success)"></i> Sick Leave</div>
+                            <div class="ac-detail-row"><i class="ti ti-calendar"></i> May 19 – May 20, 2026</div>
+                            <div class="ac-detail-row"><i class="ti ti-message-2"></i> Medical appointment + recovery</div>
+                            <div class="ac-detail-row"><i class="ti ti-paperclip" style="color:var(--primary)"></i> medical_cert.pdf</div>
+                        </div>
+                        <div class="ac-actions">
+                            <button class="btn-outline btn-reject"><i class="ti ti-x"></i></button>
+                            <button class="btn-outline btn-approve"><i class="ti ti-check"></i> Approve</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bottom-nav">
+                    <div class="bn-item active"><i class="ti ti-clipboard-check"></i><span>Approvals</span></div>
+                    <div class="bn-item" onclick="showScreen('team', document.querySelectorAll('.nav-btn')[5])"><i class="ti ti-users-group"></i><span>Team</span></div>
+                    <div class="bn-item" onclick="showScreen('report', document.querySelectorAll('.nav-btn')[6])"><i class="ti ti-chart-pie"></i><span>Reports</span></div>
+                    <div class="bn-item"><i class="ti ti-settings"></i><span>Settings</span></div>
+                </div>
+            </div>
+
+            <!-- ================= SCREEN: TEAM VIEW ================= -->
+            <div class="screen" id="screen-team">
+                <div class="app-header">
+                    <div class="status-bar light-text" style="padding:0; margin-bottom: 16px;">
+                        <span>9:41</span>
+                        <div style="display:flex; gap:4px"><i class="ti ti-reception-4"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-filled"></i></div>
+                    </div>
+                    <h1 style="font-size: 24px; font-weight: 700;">Team Directory</h1>
+                    <div class="search-bar">
+                        <i class="ti ti-search" style="font-size:18px"></i>
+                        <input type="text" placeholder="Search team members...">
+                    </div>
+                </div>
+
+                <div class="content-area">
+                    <div class="stats-row" style="margin-bottom: 0;">
+                        <div class="stat-box">
+                            <div class="stat-val" style="color:var(--text-main)">08</div>
+                            <div class="stat-lbl" style="color:var(--text-secondary)">Total</div>
+                        </div>
+                        <div class="stat-box" style="background:var(--success-light); border-color:var(--success-light)">
+                            <div class="stat-val" style="color:var(--success)">05</div>
+                            <div class="stat-lbl" style="color:var(--success)">Active</div>
+                        </div>
+                        <div class="stat-box" style="background:var(--warning-light); border-color:var(--warning-light)">
+                            <div class="stat-val" style="color:var(--warning)">03</div>
+                            <div class="stat-lbl" style="color:var(--warning)">On Leave</div>
+                        </div>
+                    </div>
+
+                    <div class="ui-card" style="padding: 0 16px;">
+                        <div style="padding: 16px 0 8px; font-size: 13px; font-weight: 600; color: var(--text-secondary);">Engineering Dept</div>
+                        
+                        <div class="list-item">
+                            <div class="team-avatar" style="background:#0EA5E9">NP</div>
+                            <div class="li-content">
+                                <div class="li-title">Nuwan Perera</div>
+                                <div class="li-subtitle">Backend Developer</div>
+                            </div>
+                            <div class="status-pill status-approved">Working</div>
+                        </div>
+                        <div class="list-item">
+                            <div class="team-avatar" style="background:#10B981">SR</div>
+                            <div class="li-content">
+                                <div class="li-title">Sajith Sampath</div>
+                                <div class="li-subtitle">Software Engineer</div>
+                            </div>
+                            <div class="status-pill status-approved">Working</div>
+                        </div>
+                        <div class="list-item">
+                            <div class="team-avatar" style="background:#8B5CF6">DP</div>
+                            <div class="li-content">
+                                <div class="li-title">Dilani Prasad</div>
+                                <div class="li-subtitle">DevOps Engineer</div>
+                            </div>
+                            <div class="status-pill status-pending" style="background:var(--warning-light); color:var(--warning)">On Leave</div>
+                        </div>
+                        
+                        <div style="padding: 16px 0 8px; font-size: 13px; font-weight: 600; color: var(--text-secondary); border-top: 1px solid var(--border-light);">QA & Design</div>
+                        
+                        <div class="list-item">
+                            <div class="team-avatar" style="background:#F43F5E">AF</div>
+                            <div class="li-content">
+                                <div class="li-title">Amali Fernando</div>
+                                <div class="li-subtitle">QA Engineer</div>
+                            </div>
+                            <div class="status-pill status-pending" style="background:var(--warning-light); color:var(--warning)">On Leave</div>
+                        </div>
+                        <div class="list-item">
+                            <div class="team-avatar" style="background:#F59E0B">KJ</div>
+                            <div class="li-content">
+                                <div class="li-title">Kasun Jayawardena</div>
+                                <div class="li-subtitle">UI Designer</div>
+                            </div>
+                            <div class="status-pill status-approved">Working</div>
+                        </div>
+                    </div>
+                </div>
+
+                 <div class="bottom-nav">
+                    <div class="bn-item" onclick="showScreen('approvals', document.querySelectorAll('.nav-btn')[4])"><i class="ti ti-clipboard-check"></i><span>Approvals</span></div>
+                    <div class="bn-item active"><i class="ti ti-users-group"></i><span>Team</span></div>
+                    <div class="bn-item" onclick="showScreen('report', document.querySelectorAll('.nav-btn')[6])"><i class="ti ti-chart-pie"></i><span>Reports</span></div>
+                    <div class="bn-item"><i class="ti ti-settings"></i><span>Settings</span></div>
+                </div>
+            </div>
+
+            <!-- ================= SCREEN: REPORTS ================= -->
+            <div class="screen" id="screen-report">
+                <div class="status-bar dark-text">
+                    <span>9:41</span>
+                    <div style="display:flex; gap:4px"><i class="ti ti-reception-4"></i><i class="ti ti-wifi"></i><i class="ti ti-battery-filled"></i></div>
+                </div>
+                <div class="app-header-light" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 16px;">
+                    <h1 style="font-size: 24px; font-weight: 700;">Reports</h1>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="icon-btn-light"><i class="ti ti-download"></i></button>
+                        <button class="icon-btn-light"><i class="ti ti-filter"></i></button>
+                    </div>
+                </div>
+
+                <div class="content-area" style="padding-top: 0;">
+                    <div class="ui-card">
+                        <div class="section-header" style="margin-bottom: 20px;">
+                            <h2 class="section-title">Team Usage (May '26)</h2>
+                        </div>
+                        
+                        <div class="progress-bar-container">
+                            <div class="progress-header">
+                                <span style="color:var(--text-secondary)">Annual Leave</span>
+                                <span style="color:var(--text-main)">42 Days</span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill" style="width: 65%; background: var(--primary);"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-bar-container">
+                            <div class="progress-header">
+                                <span style="color:var(--text-secondary)">Sick Leave</span>
+                                <span style="color:var(--text-main)">18 Days</span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill" style="width: 45%; background: var(--success);"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-bar-container" style="margin-bottom: 0;">
+                            <div class="progress-header">
+                                <span style="color:var(--text-secondary)">Casual Leave</span>
+                                <span style="color:var(--text-main)">9 Days</span>
+                            </div>
+                            <div class="progress-track">
+                                <div class="progress-fill" style="width: 25%; background: var(--warning);"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="section-header">
+                            <h2 class="section-title">Top Leave Takers</h2>
+                        </div>
+                        <div class="ui-card" style="padding: 0 16px;">
+                            <div class="list-item">
+                                <div class="team-avatar" style="background:#F43F5E">AF</div>
+                                <div class="li-content">
+                                    <div class="li-title">Amali Fernando</div>
+                                    <div class="li-subtitle">QA Engineer</div>
+                                </div>
+                                <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">12 <span style="font-size:11px; font-weight:500; color:var(--text-secondary)">Days</span></div>
+                            </div>
+                            <div class="list-item">
+                                <div class="team-avatar" style="background:#F59E0B">KJ</div>
+                                <div class="li-content">
+                                    <div class="li-title">Kasun Jayawardena</div>
+                                    <div class="li-subtitle">UI Designer</div>
+                                </div>
+                                <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">09 <span style="font-size:11px; font-weight:500; color:var(--text-secondary)">Days</span></div>
+                            </div>
+                            <div class="list-item">
+                                <div class="team-avatar" style="background:#0EA5E9">NP</div>
+                                <div class="li-content">
+                                    <div class="li-title">Nuwan Perera</div>
+                                    <div class="li-subtitle">Backend Developer</div>
+                                </div>
+                                <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">07 <span style="font-size:11px; font-weight:500; color:var(--text-secondary)">Days</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                 <div class="bottom-nav">
+                    <div class="bn-item" onclick="showScreen('approvals', document.querySelectorAll('.nav-btn')[4])"><i class="ti ti-clipboard-check"></i><span>Approvals</span></div>
+                    <div class="bn-item" onclick="showScreen('team', document.querySelectorAll('.nav-btn')[5])"><i class="ti ti-users-group"></i><span>Team</span></div>
+                    <div class="bn-item active"><i class="ti ti-chart-pie"></i><span>Reports</span></div>
+                    <div class="bn-item"><i class="ti ti-settings"></i><span>Settings</span></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    // Initialize first screen
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialization handled by hardcoded HTML 'active' classes
+    });
+
+    function showScreen(id, ignoredArg) {
+        // Hide all screens
+        document.querySelectorAll('.screen').forEach(s => {
+            s.classList.remove('active');
+        });
+        
+        // Remove active state from all nav buttons
+        document.querySelectorAll('.nav-btn').forEach(b => {
+            b.classList.remove('active');
+        });
+
+        // Show target screen
+        const targetScreen = document.getElementById('screen-' + id);
+        if (targetScreen) {
+            targetScreen.classList.add('active');
+        }
+
+        // Dynamically highlight corresponding button in side nav using data-target attribute
+        const targetNavBtn = document.querySelector(`.nav-btn[data-target="${id}"]`);
+        if (targetNavBtn) {
+            targetNavBtn.classList.add('active');
+        }
+    }
+</script>
+
+</body>
+</html>
