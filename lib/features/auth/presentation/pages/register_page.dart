@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../core/router/app_router.dart';
 import '../providers/auth_provider.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
@@ -43,8 +44,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           schoolSlug: _tenantCtrl.text.trim(),
         );
 
-    if (ref.read(signUpNotifierProvider).isSuccess) {
+    if (mounted && ref.read(signUpNotifierProvider).isSuccess) {
       TextInput.finishAutofillContext();
+      if (mounted) context.go(AppRoutes.dashboard);
     }
   }
 

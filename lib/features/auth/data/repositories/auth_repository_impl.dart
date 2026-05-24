@@ -1,13 +1,12 @@
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthException;
-import 'package:supabase_flutter/supabase_flutter.dart' as supa
-    show AuthException;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../../../core/error/failures.dart';
 import '../datasources/auth_remote_datasource.dart';
 
 /// Concrete implementation of [AuthRepository].
-/// Wraps [AuthRemoteDatasource] calls and maps Supabase errors
+/// Wraps [AuthRemoteDatasource] calls and maps Firebase errors
 /// to typed [AuthFailure]s.
 class AuthRepositoryImpl implements AuthRepository {
   const AuthRepositoryImpl(this._datasource);
@@ -30,19 +29,20 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     try {
       return await _datasource.signIn(email: email, password: password);
-    } on supa.AuthException catch (e) {
-      final msg = e.message.toLowerCase();
-      if (msg.contains('invalid') ||
+    } on FirebaseAuthException catch (e) {
+      final msg = e.message?.toLowerCase() ?? '';
+      if (e.code == 'user-not-found' ||
+          e.code == 'wrong-password' ||
+          e.code == 'invalid-credential' ||
+          msg.contains('invalid') ||
           msg.contains('credentials') ||
-          msg.contains('password') ||
-          msg.contains('not found')) {
+          msg.contains('password')) {
         throw const InvalidCredentialsFailure();
       }
-      throw UnknownAuthFailure(e.message);
-    } on PostgrestException catch (e) {
-      // Profile row missing
-      if (e.code == 'PGRST116') throw const ProfileNotFoundFailure();
-      throw UnknownAuthFailure(e.message);
+      throw UnknownAuthFailure(e.message ?? 'Unknown Firebase Auth Error');
+    } on FirebaseException catch (e) {
+      if (e.code == 'not-found') throw const ProfileNotFoundFailure();
+      throw UnknownAuthFailure(e.message ?? 'Firebase Error');
     } catch (e) {
       final msg = e.toString().toLowerCase();
       if (msg.contains('socket') ||
@@ -68,15 +68,15 @@ class AuthRepositoryImpl implements AuthRepository {
         fullName: fullName,
         schoolSlug: schoolSlug,
       );
-    } on supa.AuthException catch (e) {
-      final msg = e.message.toLowerCase();
-      if (msg.contains('already registered') || msg.contains('already exists')) {
-        throw const InvalidCredentialsFailure(); // or a specific user-exists failure
+    } on FirebaseAuthException catch (e) {
+      final msg = e.message?.toLowerCase() ?? '';
+      if (e.code == 'email-already-in-use' || msg.contains('already in use')) {
+        throw const EmailAlreadyInUseFailure();
       }
-      throw UnknownAuthFailure(e.message);
-    } on PostgrestException catch (e) {
-      if (e.code == 'PGRST116') throw const ProfileNotFoundFailure();
-      throw UnknownAuthFailure(e.message);
+      throw UnknownAuthFailure(e.message ?? 'Unknown Firebase Auth Error');
+    } on FirebaseException catch (e) {
+      if (e.code == 'not-found') throw const ProfileNotFoundFailure();
+      throw UnknownAuthFailure(e.message ?? 'Firebase Error');
     } catch (e) {
       final msg = e.toString().toLowerCase();
       if (msg.contains('socket') ||

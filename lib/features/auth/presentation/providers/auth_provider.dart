@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../data/datasources/auth_remote_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
@@ -14,11 +15,14 @@ part 'auth_provider.g.dart';
 // ── Infrastructure providers ──────────────────────────────────────
 
 @riverpod
-SupabaseClient supabaseClient(Ref ref) => Supabase.instance.client;
+FirebaseAuth firebaseAuth(Ref ref) => FirebaseAuth.instance;
+
+@riverpod
+FirebaseFirestore firestore(Ref ref) => FirebaseFirestore.instance;
 
 @riverpod
 AuthRemoteDatasource authRemoteDatasource(Ref ref) =>
-    AuthRemoteDatasource(ref.watch(supabaseClientProvider));
+    AuthRemoteDatasource(ref.watch(firebaseAuthProvider), ref.watch(firestoreProvider));
 
 @riverpod
 AuthRepository authRepository(Ref ref) =>

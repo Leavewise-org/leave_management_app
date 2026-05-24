@@ -5,12 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:leave_management_app/shared/placeholder/placeholder_page.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-// Auth
+// Auth & Dashboard
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/leave/presentation/pages/dashboard_page.dart';
 
 part 'app_router.g.dart';
 
@@ -34,16 +35,16 @@ abstract class AppRoutes {
 }
 
 // ── Auth listenable (no Riverpod chain involved) ───────────────────
-/// Wraps Supabase's onAuthStateChange as a [Listenable] for GoRouter.
+/// Wraps Firebase's authStateChanges as a [Listenable] for GoRouter.
 /// This avoids all Riverpod provider chain / rebuild issues.
-class _SupabaseAuthNotifier extends ChangeNotifier {
-  _SupabaseAuthNotifier() {
-    _sub = Supabase.instance.client.auth.onAuthStateChange.listen((_) {
+class _FirebaseAuthNotifier extends ChangeNotifier {
+  _FirebaseAuthNotifier() {
+    _sub = FirebaseAuth.instance.authStateChanges().listen((_) {
       notifyListeners();
     });
   }
 
-  late final StreamSubscription<AuthState> _sub;
+  late final StreamSubscription<User?> _sub;
 
   @override
   void dispose() {
@@ -55,7 +56,7 @@ class _SupabaseAuthNotifier extends ChangeNotifier {
 // ── Router provider ────────────────────────────────────────────────
 @Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
-  final authNotifier = _SupabaseAuthNotifier();
+  final authNotifier = _FirebaseAuthNotifier();
 
   ref.onDispose(() {
     authNotifier.dispose();
@@ -68,8 +69,8 @@ GoRouter appRouter(Ref ref) {
 
     redirect: (context, state) {
       // Check the live session directly — no Riverpod, no streams, no asyncMap
-      final session = Supabase.instance.client.auth.currentSession;
-      final isLoggedIn = session != null;
+      final currentUser = FirebaseAuth.instance.currentUser;
+      final isLoggedIn = currentUser != null;
       final location = state.matchedLocation;
 
       final isSplash = location == AppRoutes.splash;
@@ -121,8 +122,7 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.dashboard,
         name: 'dashboard',
-        builder: (context, state) =>
-            const PlaceholderPage(label: 'Dashboard'),
+        builder: (context, state) => const DashboardPage(),
         routes: [
           GoRoute(
             path: 'apply',

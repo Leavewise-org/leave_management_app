@@ -1,7 +1,8 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/user_entity.dart';
 
-/// Data model that maps the `profiles` table row + Supabase auth user
+/// Data model that maps the `profiles` collection document + Firebase auth user
 /// into a domain [UserEntity].
 class UserModel {
   const UserModel({
@@ -25,21 +26,22 @@ class UserModel {
   final String? fcmToken;
 
   /// Builds a [UserModel] from:
-  /// - [authUser] — the Supabase `auth.User` (provides id + email)
-  /// - [profileRow] — a row from the `profiles` table
-  factory UserModel.fromSupabase({
+  /// - [authUser] — the Firebase `User` (provides id + email)
+  /// - [profileDoc] — a document from the `profiles` collection
+  factory UserModel.fromFirebase({
     required User authUser,
-    required Map<String, dynamic> profileRow,
+    required DocumentSnapshot<Map<String, dynamic>> profileDoc,
   }) {
+    final data = profileDoc.data() ?? {};
     return UserModel(
-      id: authUser.id,
+      id: authUser.uid,
       email: authUser.email ?? '',
-      schoolId: profileRow['school_id'] as String,
-      fullName: profileRow['full_name'] as String,
-      role: profileRow['role'] as String? ?? 'employee',
-      departmentId: profileRow['department_id'] as String?,
-      avatarUrl: profileRow['avatar_url'] as String?,
-      fcmToken: profileRow['fcm_token'] as String?,
+      schoolId: data['school_id'] as String? ?? 'unknown',
+      fullName: data['full_name'] as String? ?? 'Unknown User',
+      role: data['role'] as String? ?? 'employee',
+      departmentId: data['department_id'] as String?,
+      avatarUrl: data['avatar_url'] as String?,
+      fcmToken: data['fcm_token'] as String?,
     );
   }
 

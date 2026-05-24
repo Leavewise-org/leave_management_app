@@ -37,9 +37,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           email: _emailCtrl.text.trim(),
           password: _passCtrl.text,
         );
-        
-    if (ref.read(signInNotifierProvider).isSuccess) {
+
+    if (mounted && ref.read(signInNotifierProvider).isSuccess) {
       TextInput.finishAutofillContext();
+      // GoRouter's refreshListenable already redirects based on authStateChanges.
+      // The context.go here is a fallback for immediate navigation.
+      if (mounted) context.go(AppRoutes.dashboard);
     }
   }
 

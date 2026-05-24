@@ -11,6 +11,12 @@ final class InvalidCredentialsFailure extends AuthFailure {
       : super('Invalid email or password. Please try again.');
 }
 
+/// Email is already registered to an existing account.
+final class EmailAlreadyInUseFailure extends AuthFailure {
+  const EmailAlreadyInUseFailure()
+      : super('An account with this email already exists. Try signing in.');
+}
+
 /// Network unreachable.
 final class NetworkFailure extends AuthFailure {
   const NetworkFailure() : super('No internet connection.');
@@ -32,3 +38,4 @@ final class ProfileNotFoundFailure extends AuthFailure {
 final class UnknownAuthFailure extends AuthFailure {
   const UnknownAuthFailure(super.message);
 }
+

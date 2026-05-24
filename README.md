@@ -1,14 +1,14 @@
 # Leave Management System
 
-**Flutter · Supabase · Riverpod · Clean Architecture · Multi-Tenant**
+**Flutter · Firebase · Riverpod · Clean Architecture · Multi-Tenant**
 
 ---
 
 ## Project Overview
 
-A full-featured, multi-tenant leave management platform built with Flutter, Supabase, and Riverpod following Clean Architecture principles. Supports multiple schools (tenants) with complete data isolation enforced at the database level via Row Level Security. Each school has its own employees, managers, and leave configuration. A super-admin role provides a cross-school platform dashboard.
+A full-featured, multi-tenant leave management platform built with Flutter, Firebase, and Riverpod following Clean Architecture principles. Supports multiple schools (tenants) with complete data isolation enforced at the database level via Firestore Security Rules. Each school has its own employees, managers, and leave configuration. A super-admin role provides a cross-school platform dashboard.
 
-Supports employee and manager workflows including leave application, approval, team calendar, and reporting — plus school onboarding, push notifications via FCM, and transactional email via Resend/SendGrid.
+Supports employee and manager workflows including leave application, approval, team calendar, and reporting — plus school onboarding and role-based data isolation.
 
 ---
 
@@ -17,21 +17,18 @@ Supports employee and manager workflows including leave application, approval, t
 | Category | Technology | Purpose |
 |---|---|---|
 | Frontend | Flutter 3.x | Cross-platform UI (Android, iOS, Web) |
-| Backend / DB | Supabase | PostgreSQL, Auth, Realtime, Storage, RLS |
+| Backend / DB | Firebase | Firestore, Auth, Storage, Security Rules |
 | State management | Riverpod 2.x | Async state, providers, dependency injection |
 | Code generation | freezed + json_serializable | Immutable models, JSON serialization |
 | Routing | go_router | Declarative navigation with guards |
 | DI / Service Locator | get_it | Dependency injection container |
 | Local storage | flutter_secure_storage | Token caching, offline prefs |
-| HTTP / API | supabase_flutter | Supabase Flutter SDK |
+| HTTP / API | firebase_core, cloud_firestore, firebase_auth | Firebase Flutter SDKs |
 | UI components | flutter_screenutil | Responsive sizing |
 | Date handling | table_calendar | Leave calendar widget |
-| Push notifications | Firebase Cloud Messaging (FCM) | Cross-platform push — no Firestore used |
-| Email | Resend / SendGrid | Transactional email via Edge Functions |
+
 | Linting | flutter_lints | Code quality |
 | Testing | mocktail + flutter_test | Unit and widget tests |
-
-> **Note on Firebase:** FCM is used exclusively for push notifications. Firestore is not used — PostgreSQL via Supabase is the single source of truth for all data.
 
 ---
 
@@ -39,7 +36,7 @@ Supports employee and manager workflows including leave application, approval, t
 
 ### Core Principle
 
-Every table carries a `school_id` foreign key. Every RLS policy checks both `school_id` and the user's role. A manager at Ananda College cannot read, write, or approve leaves belonging to Royal College — enforced at the database level, not just the application layer.
+Every Firestore document inside subcollections carries a `schoolId` reference or is nested under a `schools` collection. Every Security Rule checks both `schoolId` and the user's role from their user document or custom claims. A manager at Ananda College cannot read, write, or approve leaves belonging to Royal College — enforced at the database level, not just the application layer.
 
 ### Roles
 
@@ -57,292 +54,130 @@ Every table carries a `school_id` foreign key. Every RLS policy checks both `sch
 - Flutter SDK >= 3.0.0
 - Dart >= 3.0.0
 - Android Studio or VS Code with Flutter extension
-- Supabase account (free tier at supabase.com)
-- Firebase project (for FCM push notifications only)
+- Firebase project (at console.firebase.google.com)
 - Git
 
 ---
 
-## Supabase Setup
+## Firebase Setup
 
-### Step 1 — Create a Supabase Project
+### Step 1 — Create a Firebase Project
 
-- Go to [app.supabase.com](https://app.supabase.com) and sign in
-- Click **New project** and fill in project name, database password, and region
-- Wait for the project to provision (~2 minutes)
-- Go to **Settings > API** and copy your Project URL and anon public key
+- Go to [console.firebase.google.com](https://console.firebase.google.com) and create a new project.
+- Enable **Authentication** (Email/Password provider).
+- Enable **Firestore Database** (Start in production mode).
+- Enable **Firebase Storage**.
+- Register your Android, iOS, and Web apps to get the respective configuration files (`google-services.json`, `GoogleService-Info.plist`, `firebase_options.dart`).
 
 ---
 
-### Step 2 — Run the Multi-Tenant Database Schema
+### Step 2 — Firestore Data Structure
 
-Open the SQL Editor in Supabase and run the following script:
+We use a root-level collections structure to keep querying simple and scalable:
 
-```sql
--- Enable UUID extension
-create extension if not exists "uuid-ossp";
+- `/schools/{schoolId}`
+- `/profiles/{userId}` (Extends Firebase Auth User)
+- `/departments/{departmentId}`
+- `/leave_balances/{balanceId}`
+- `/leave_requests/{requestId}`
+- `/leave_type_configs/{configId}`
 
--- ============================================================
--- SCHOOLS (tenants)
--- ============================================================
-create table schools (
-  id            uuid primary key default uuid_generate_v4(),
-  name          text not null,
-  slug          text unique not null,          -- e.g. "ananda-college"
-  logo_url      text,
-  timezone      text default 'Asia/Colombo',
-  plan          text check (plan in ('free','pro','enterprise')) default 'free',
-  academic_year_start  date,                  -- e.g. 2025-01-01
-  academic_year_end    date,                  -- e.g. 2025-12-31
-  created_at    timestamptz default now()
-);
+---
 
--- ============================================================
--- DEPARTMENTS
--- ============================================================
-create table departments (
-  id          uuid primary key default uuid_generate_v4(),
-  school_id   uuid references schools(id) on delete cascade not null,
-  name        text not null,
-  manager_id  uuid references auth.users(id),
-  created_at  timestamptz default now()
-);
+### Step 3 — Configure Firestore Security Rules
 
--- ============================================================
--- USER PROFILES (extends auth.users)
--- ============================================================
-create table profiles (
-  id            uuid primary key references auth.users(id),
-  school_id     uuid references schools(id) on delete cascade not null,
-  full_name     text not null,
-  role          text check (role in ('employee','manager','school_admin','super_admin')) default 'employee',
-  department_id uuid references departments(id),
-  avatar_url    text,
-  fcm_token     text,                         -- stored for push notifications
-  created_at    timestamptz default now()
-);
+To enforce multi-tenancy and role-based access, you must deploy Firestore security rules. If you skip this, Firebase will block all reads and writes by default.
 
--- ============================================================
--- LEAVE BALANCES
--- ============================================================
-create table leave_balances (
-  id          uuid primary key default uuid_generate_v4(),
-  school_id   uuid references schools(id) on delete cascade not null,
-  user_id     uuid references profiles(id) on delete cascade,
-  annual      int default 20,
-  sick        int default 10,
-  casual      int default 6,
-  comp_off    int default 0,
-  year        int default extract(year from now())::int,
-  unique(user_id, year)
-);
+**How to deploy:**
+1. Ensure your `.firebaserc` file points to your active project (e.g., `{"projects": {"default": "leave-management-system-ed5eb"}}`).
+2. Run these commands in your terminal:
 
--- ============================================================
--- LEAVE REQUESTS
--- ============================================================
-create table leave_requests (
-  id             uuid primary key default uuid_generate_v4(),
-  school_id      uuid references schools(id) on delete cascade not null,
-  user_id        uuid references profiles(id) on delete cascade,
-  type           text check (type in ('annual','sick','casual','comp_off','unpaid')),
-  start_date     date not null,
-  end_date       date not null,
-  days_count     int generated always as (end_date - start_date + 1) stored,
-  reason         text,
-  status         text check (status in ('pending','approved','rejected')) default 'pending',
-  attachment_url text,
-  reviewed_by    uuid references profiles(id),
-  reviewed_at    timestamptz,
-  created_at     timestamptz default now()
-);
+```bash
+firebase login
+firebase deploy --only firestore:rules
+```
 
--- ============================================================
--- LEAVE TYPE CONFIG (per school — allows custom leave quotas)
--- ============================================================
-create table leave_type_configs (
-  id          uuid primary key default uuid_generate_v4(),
-  school_id   uuid references schools(id) on delete cascade not null,
-  type        text not null,
-  label       text not null,
-  default_days int not null,
-  created_at  timestamptz default now(),
-  unique(school_id, type)
-);
+Here are the rules that should be in your `firestore.rules` file:
 
--- ============================================================
--- AUTH USER CREATION TRIGGER
--- Automatically creates a profile when a user signs up
--- ============================================================
-create or replace function public.handle_new_user()
-returns trigger as $$
-declare
-  v_school_id uuid;
-begin
-  -- Look up the school ID from the slug provided during sign-up
-  select id into v_school_id
-  from public.schools
-  where slug = new.raw_user_meta_data->>'school_slug';
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ── HELPER FUNCTIONS ──────────────────────
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function getUserProfile() {
+      return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data;
+    }
+    
+    function isMySchool(schoolId) {
+      return getUserProfile().schoolId == schoolId;
+    }
+    
+    function getMyRole() {
+      return getUserProfile().role;
+    }
+    
+    // ── PROFILES ──────────────────────────────
+    match /profiles/{userId} {
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        getMyRole() == 'super_admin' ||
+        (isMySchool(resource.data.schoolId) && getMyRole() in ['manager', 'school_admin'])
+      );
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
 
-  -- If a valid school was found, create the profile
-  if v_school_id is not null then
-    insert into public.profiles (id, school_id, full_name, role)
-    values (
-      new.id,
-      v_school_id,
-      new.raw_user_meta_data->>'full_name',
-      'employee'
-    );
-  end if;
+    // ── LEAVE REQUESTS ────────────────────────
+    match /leave_requests/{requestId} {
+      allow read: if isAuthenticated() && (
+        getMyRole() == 'super_admin' ||
+        (isMySchool(resource.data.schoolId) && getMyRole() in ['manager', 'school_admin']) ||
+        (isMySchool(resource.data.schoolId) && resource.data.userId == request.auth.uid)
+      );
+      
+      allow create: if isAuthenticated() && 
+        isMySchool(request.resource.data.schoolId) && 
+        request.resource.data.userId == request.auth.uid;
+        
+      allow update: if isAuthenticated() && 
+        isMySchool(resource.data.schoolId) && 
+        getMyRole() in ['manager', 'school_admin'];
+    }
 
-  return new;
-end;
-$$ language plpgsql security definer set search_path = public;
+    // ── LEAVE BALANCES ────────────────────────
+    match /leave_balances/{balanceId} {
+      allow read: if isAuthenticated() && (
+        getMyRole() == 'super_admin' ||
+        (isMySchool(resource.data.schoolId) && getMyRole() in ['manager', 'school_admin']) ||
+        (isMySchool(resource.data.schoolId) && resource.data.userId == request.auth.uid)
+      );
+    }
 
-drop trigger if exists on_auth_user_created on auth.users;
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
+    // ── LEAVE TYPE CONFIGS ────────────────────
+    match /leave_type_configs/{configId} {
+      allow read: if isAuthenticated() && isMySchool(resource.data.schoolId);
+      allow write: if isAuthenticated() && 
+        isMySchool(resource.data.schoolId) && 
+        getMyRole() in ['school_admin', 'super_admin'];
+    }
+
+    // ── SCHOOLS ───────────────────────────────
+    match /schools/{schoolId} {
+      allow read: if isAuthenticated() && (
+        getMyRole() == 'super_admin' || isMySchool(schoolId)
+      );
+      allow write: if isAuthenticated() && getMyRole() == 'super_admin';
+    }
+  }
+}
 ```
 
 ---
 
-### Step 3 — Configure Row Level Security
-
-```sql
--- Enable RLS on all tables
-alter table schools            enable row level security;
-alter table departments        enable row level security;
-alter table profiles           enable row level security;
-alter table leave_requests     enable row level security;
-alter table leave_balances     enable row level security;
-alter table leave_type_configs enable row level security;
-
--- ── HELPER: get calling user's school_id ──────────────────────
-create or replace function my_school_id()
-returns uuid language sql security definer set search_path = public stable as $$
-  select school_id from profiles where id = auth.uid()
-$$;
-
--- ── HELPER: get calling user's role ───────────────────────────
-create or replace function my_role()
-returns text language sql security definer set search_path = public stable as $$
-  select role from profiles where id = auth.uid()
-$$;
-
--- ── PROFILES ──────────────────────────────────────────────────
-create policy "Read own profile"
-  on profiles for select using (id = auth.uid());
-
-create policy "Manager reads team profiles"
-  on profiles for select using (
-    my_role() in ('manager','school_admin')
-    and school_id = my_school_id()
-  );
-
-create policy "Super admin reads all profiles"
-  on profiles for select using (my_role() = 'super_admin');
-
--- ── LEAVE REQUESTS ────────────────────────────────────────────
-create policy "Employee reads own leaves"
-  on leave_requests for select using (
-    user_id = auth.uid()
-    and school_id = my_school_id()
-  );
-
-create policy "Manager reads team leaves"
-  on leave_requests for select using (
-    my_role() in ('manager','school_admin')
-    and school_id = my_school_id()
-  );
-
-create policy "Super admin reads all leaves"
-  on leave_requests for select using (my_role() = 'super_admin');
-
-create policy "Employee inserts own leave"
-  on leave_requests for insert with check (
-    user_id = auth.uid()
-    and school_id = my_school_id()
-  );
-
-create policy "Manager updates team leave status"
-  on leave_requests for update using (
-    my_role() in ('manager','school_admin')
-    and school_id = my_school_id()
-  );
-
--- ── LEAVE BALANCES ────────────────────────────────────────────
-create policy "Employee reads own balance"
-  on leave_balances for select using (
-    user_id = auth.uid()
-    and school_id = my_school_id()
-  );
-
-create policy "Manager reads team balances"
-  on leave_balances for select using (
-    my_role() in ('manager','school_admin')
-    and school_id = my_school_id()
-  );
-
--- ── LEAVE TYPE CONFIG ─────────────────────────────────────────
-create policy "School members read their config"
-  on leave_type_configs for select using (school_id = my_school_id());
-
-create policy "School admin manages config"
-  on leave_type_configs for all using (
-    my_role() in ('school_admin','super_admin')
-    and school_id = my_school_id()
-  );
-
--- ── SCHOOLS ───────────────────────────────────────────────────
-create policy "School members read own school"
-  on schools for select using (id = my_school_id());
-
-create policy "Super admin manages all schools"
-  on schools for all using (my_role() = 'super_admin');
-```
-
----
-
-### Step 4 — School Onboarding Function
-
-When a new school registers, this function seeds their leave balance configuration:
-
-```sql
-create or replace function onboard_school(
-  p_name text,
-  p_slug text,
-  p_timezone text default 'Asia/Colombo'
-)
-returns uuid language plpgsql as $$
-declare
-  v_school_id uuid;
-begin
-  insert into schools (name, slug, timezone)
-  values (p_name, p_slug, p_timezone)
-  returning id into v_school_id;
-
-  -- Seed default leave type config
-  insert into leave_type_configs (school_id, type, label, default_days)
-  values
-    (v_school_id, 'annual',   'Annual Leave',   20),
-    (v_school_id, 'sick',     'Sick Leave',     10),
-    (v_school_id, 'casual',   'Casual Leave',    6),
-    (v_school_id, 'comp_off', 'Comp Off',        0);
-
-  return v_school_id;
-end;
-$$;
-```
-
----
-
-### Step 5 — Enable Realtime
-
-- In the Supabase dashboard go to **Database > Replication**
-- Enable replication for the `leave_requests` table
-- This powers live approval notifications in the app
-
----
 
 ## Flutter Project Setup
 
@@ -354,48 +189,40 @@ cd leave-management-app
 flutter pub get
 ```
 
-### Step 2 — Environment Configuration
+### Step 2 — Firebase Configuration
 
-Create a `.env` file at the project root (never commit this file):
+Use the FlutterFire CLI to configure the project:
 
-```env
-SUPABASE_URL=https://your-project-ref.supabase.co
-SUPABASE_ANON_KEY=your-anon-public-key-here
+```bash
+dart pub global activate flutterfire_cli
+flutterfire configure
 ```
 
-Load it in `main.dart`:
+This will generate `lib/firebase_options.dart`.
+
+Initialize Firebase in `main.dart`:
 
 ```dart
 // main.dart
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 Future<void> main() async {
-  await dotenv.load(fileName: '.env');
-  await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
   );
   runApp(const ProviderScope(child: MyApp()));
 }
 ```
 
-### Step 3 — FCM Setup (Push Notifications)
-
-1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
-2. Add your Android and iOS apps to the Firebase project
-3. Download `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) into the standard locations
-4. Add `firebase_messaging` to `pubspec.yaml`
-5. On login, request notification permission and store the FCM token in `profiles.fcm_token`
-
-> Firestore is **not** used. FCM handles only push delivery — all data lives in PostgreSQL.
-
-### Step 4 — Run Code Generation
+### Step 3 — Run Code Generation
 
 ```bash
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-### Step 5 — Run the App
+### Step 4 — Run the App
 
 ```bash
 # Android
@@ -424,11 +251,9 @@ lib/
 │   ├── error/
 │   │   ├── exceptions.dart
 │   │   └── failures.dart
-│   ├── network/
-│   │   └── supabase_client.dart
 │   ├── router/
 │   │   ├── app_router.dart
-│   │   └── route_guards.dart        ← guards check role + school_id
+│   │   └── route_guards.dart        ← guards check role + schoolId
 │   ├── di/
 │   │   └── injection_container.dart
 │   └── utils/
@@ -537,7 +362,7 @@ lib/
 │   │       │   └── manager_providers.dart
 │   │       ├── pages/
 │   │       │   ├── approvals_page.dart
-│   │       │   ├── team_overview_page.dart
+│   │       ├── team_overview_page.dart
 │   │       │   └── reports_page.dart
 │   │       └── widgets/
 │   │           ├── pending_leave_card.dart
@@ -579,13 +404,6 @@ lib/
 │
 └── main.dart
 
-supabase/
-└── functions/                         ← NEW: Edge Functions
-    ├── notify-leave-status/
-    │   └── index.ts                   ← sends push via FCM + email via Resend
-    └── onboard-school/
-        └── index.ts                   ← seeds school config on registration
-
 test/
 ├── unit/
 │   ├── leave/
@@ -607,8 +425,8 @@ test/
 
 | Layer | Folder | Responsibility |
 |---|---|---|
-| Domain | `domain/entities`, `usecases`, `repositories` | Pure Dart business logic. No Flutter or Supabase imports. |
-| Data | `data/models`, `datasources`, `repositories` | Supabase calls, JSON mapping, implements domain contracts. |
+| Domain | `domain/entities`, `usecases`, `repositories` | Pure Dart business logic. No Flutter or Firebase imports. |
+| Data | `data/models`, `datasources`, `repositories` | Firebase calls, JSON mapping, implements domain contracts. |
 | Presentation | `presentation/providers`, `pages`, `widgets` | Riverpod providers, UI widgets, user interaction. |
 | Core | `core/` | Shared utilities, routing, DI, error types. |
 | Shared | `shared/` | Reusable widgets and theme used across features. |
@@ -620,30 +438,12 @@ UI widget
   → Riverpod provider
     → UseCase
       → Repository interface
-        → DataSource (Supabase, school_id scoped by RLS)
+        → DataSource (Firestore, schoolId scoped by Rules)
           → Result flows back as AsyncValue
 ```
 
 ---
 
-## Edge Functions
-
-### `notify-leave-status`
-
-Triggered by a Supabase database webhook when `leave_requests.status` changes. Sends a push notification to the employee's device via FCM (using their stored `fcm_token`) and a transactional email via Resend or SendGrid.
-
-### `onboard-school`
-
-Called during school registration. Runs the `onboard_school()` SQL function to create the school record and seed its leave type configuration.
-
-Deploy with:
-
-```bash
-supabase functions deploy notify-leave-status
-supabase functions deploy onboard-school
-```
-
----
 
 ## pubspec.yaml Dependencies
 
@@ -652,8 +452,11 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Supabase
-  supabase_flutter: ^2.3.0
+  # Firebase
+  firebase_core: ^3.0.0
+  firebase_auth: ^5.0.0
+  cloud_firestore: ^5.0.0
+  firebase_messaging: ^15.0.0
 
   # State management
   flutter_riverpod: ^2.5.1
@@ -673,13 +476,6 @@ dependencies:
 
   # Local storage
   flutter_secure_storage: ^9.0.0
-
-  # Environment
-  flutter_dotenv: ^5.1.0
-
-  # Push notifications (FCM only — Firestore not used)
-  firebase_core: ^3.0.0
-  firebase_messaging: ^15.0.0
 
 dev_dependencies:
   flutter_test:
@@ -732,7 +528,7 @@ Stream<List<LeaveRequestEntity>> myLeaveRequests(
   MyLeaveRequestsRef ref,
 ) {
   final repo = ref.watch(leaveRepositoryProvider);
-  // school_id filtering is enforced by RLS — no manual filter needed
+  // Firestore security rules enforce schoolId scope, but we query by it
   return repo.watchMyLeaves();
 }
 
@@ -753,7 +549,7 @@ class ApplyLeaveNotifier extends _$ApplyLeaveNotifier {
 ### Super Admin Cross-School Query
 
 ```dart
-// super_admin bypasses school_id scoping via the super_admin RLS role
+// super_admin bypasses schoolId scoping via their role
 @riverpod
 Future<List<SchoolEntity>> allSchools(AllSchoolsRef ref) {
   final repo = ref.watch(superAdminRepositoryProvider);
@@ -765,16 +561,25 @@ Future<List<SchoolEntity>> allSchools(AllSchoolsRef ref) {
 
 ## Security Checklist
 
-- Add `.env` to `.gitignore` — never commit credentials
-- Enable RLS on every Supabase table before going to production
-- Every table must have a `school_id` column with a `NOT NULL` constraint
-- Every RLS policy must check `school_id = my_school_id()` — never rely on app-layer filtering alone
-- Use `supabase_flutter` auth session — never store passwords locally
-- Validate all leave date ranges on the server via Postgres check constraints
-- Restrict `super_admin` role assignment — only via Supabase dashboard or a trusted server-side function, never from the client
-- Enable Supabase audit logs for leave status changes and school configuration changes
-- Store FCM tokens in `profiles.fcm_token` — rotate on each login
-- Never embed Resend / SendGrid API keys in the Flutter app — use Edge Function environment variables only
+- Do not commit `firebase_options.dart` if it contains sensitive server keys (though standard Firebase options are usually safe).
+- Deploy and test Firestore Security Rules thoroughly before going to production.
+- Every document must have a `schoolId` field with a `String` constraint.
+- Every Security Rule must check `isMySchool(schoolId)` — never rely on app-layer filtering alone.
+- Use Firebase Auth session — never store passwords locally.
+- Restrict `super_admin` role assignment — only via Firebase Console, custom claims, or a trusted Cloud Function, never from the client.
+- Store FCM tokens in `profiles.fcmToken` — rotate on each login.
+- Never embed Resend / SendGrid API keys in the Flutter app — use Cloud Function environment secrets only.
+
+---
+
+## Recent Configurations & Fixes (May 2026)
+
+If you are cloning this project recently, note that the following setup steps have already been handled:
+- **Environment Variables**: Migrated from Supabase keys to Firebase. The `.env` file is now used solely for app-level flags (e.g. `APP_ENV=development`) while Firebase secrets are safely managed by `flutterfire configure`.
+- **Firebase Auth Exceptions**: Mapped Firebase's `email-already-in-use` exceptions directly to the clean architecture's `EmailAlreadyInUseFailure` in `auth_repository_impl.dart`.
+- **Routing**: Fixed `register_page.dart` and `login_page.dart` to correctly use `context.go(AppRoutes.dashboard)` upon successful authentication.
+- **Git Ignore**: Added strict `.gitignore` rules to prevent Firebase config (`google-services.json`, `GoogleService-Info.plist`) and Cloud Functions secrets (`functions/.env`) from leaking into source control.
+- **Security Rules**: Added the `firestore.rules` and `firebase.json` files to the project root for automated CLI deployments.
 
 ---
 
@@ -784,4 +589,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ---
 
-*Leave Management System · Flutter + Supabase + Riverpod + Clean Architecture · Multi-Tenant*
+*Leave Management System · Flutter + Firebase + Riverpod + Clean Architecture · Multi-Tenant*

@@ -1,0 +1,374 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
+import 'package:leave_management_app/core/router/app_router.dart';
+import 'package:leave_management_app/shared/widgets/balance_card.dart';
+import 'package:leave_management_app/shared/widgets/quick_action_btn.dart';
+import 'package:leave_management_app/shared/widgets/status_pill.dart';
+import 'package:leave_management_app/core/constants/app_colors.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+class DashboardPage extends StatelessWidget {
+  const DashboardPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    // We'll get real data later, using dummy data for now
+    final user = FirebaseAuth.instance.currentUser;
+    final userName = user?.displayName ?? 'Employee Name';
+    final userInitials = userName.isNotEmpty ? userName.substring(0, 2).toUpperCase() : 'EMP';
+
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      body: CustomScrollView(
+        slivers: [
+          _buildAppBar(userName, userInitials),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.all(24.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildBalancesSection(),
+                  SizedBox(height: 32.h),
+                  _buildQuickActions(context),
+                  SizedBox(height: 32.h),
+                  _buildRecentRequests(),
+                  SizedBox(height: 80.h), // padding for bottom nav
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAppBar(String name, String initials) {
+    return SliverAppBar(
+      expandedHeight: 100.h,
+      floating: false,
+      pinned: true,
+      elevation: 0,
+      backgroundColor: AppColors.primary,
+      flexibleSpace: FlexibleSpaceBar(
+        background: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Good morning,',
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                    Text(
+                      name,
+                      style: TextStyle(
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+                Stack(
+                  alignment: Alignment.topRight,
+                  children: [
+                    CircleAvatar(
+                      radius: 22.r,
+                      backgroundColor: AppColors.primarySubtle,
+                      child: Text(
+                        initials,
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16.sp,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Container(
+                        padding: EdgeInsets.all(4.w),
+                        decoration: BoxDecoration(
+                          color: AppColors.notifBadge,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: AppColors.primary, width: 2),
+                        ),
+                        child: Text(
+                          '2',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBalancesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'My Balances',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            Text(
+              'Details',
+              style: TextStyle(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w500,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16.h),
+        Row(
+          children: [
+            Expanded(
+              child: BalanceCard(
+                title: 'Annual',
+                value: '12',
+                subtitle: 'of 20 days left',
+                icon: Icons.wb_sunny_outlined,
+                baseColor: AppColors.annualLabel,
+                backgroundColor: AppColors.annualBackground,
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: BalanceCard(
+                title: 'Sick',
+                value: '07',
+                subtitle: 'of 10 days left',
+                icon: Icons.monitor_heart_outlined,
+                baseColor: AppColors.sickLabel,
+                backgroundColor: AppColors.sickBackground,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12.h),
+        Row(
+          children: [
+            Expanded(
+              child: BalanceCard(
+                title: 'Comp Off',
+                value: '02',
+                subtitle: 'days earned',
+                icon: Icons.access_time,
+                baseColor: AppColors.compLabel,
+                backgroundColor: AppColors.compBackground,
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: BalanceCard(
+                title: 'Unpaid',
+                value: '00',
+                subtitle: 'days taken',
+                icon: Icons.money_off,
+                baseColor: AppColors.unpaidLabel,
+                backgroundColor: Colors.transparent,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Quick Actions',
+          style: TextStyle(
+            fontSize: 16.sp,
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        SizedBox(height: 16.h),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            QuickActionBtn(
+              icon: Icons.add_circle_outline,
+              label: 'Apply\nLeave',
+              color: AppColors.primary,
+              backgroundColor: AppColors.quickBlueBackground,
+              onTap: () => context.go(AppRoutes.applyLeave),
+            ),
+            QuickActionBtn(
+              icon: Icons.calendar_today_outlined,
+              label: 'Calendar\nView',
+              color: AppColors.textSecondary,
+              backgroundColor: Colors.transparent,
+              onTap: () => context.go(AppRoutes.leaveCalendar),
+            ),
+            QuickActionBtn(
+              icon: Icons.history,
+              label: 'My\nHistory',
+              color: AppColors.textSecondary,
+              backgroundColor: Colors.transparent,
+              onTap: () => context.go(AppRoutes.leaveHistory),
+            ),
+            QuickActionBtn(
+              icon: Icons.policy_outlined,
+              label: 'Leave\nPolicies',
+              color: AppColors.textSecondary,
+              backgroundColor: Colors.transparent,
+              onTap: () {},
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecentRequests() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Recent Requests',
+              style: TextStyle(
+                fontSize: 16.sp,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            Text(
+              'View All',
+              style: TextStyle(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w500,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16.h),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20.r),
+            border: Border.all(color: AppColors.borderLight),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 6,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              _buildListItem(
+                icon: Icons.wb_sunny_outlined,
+                iconColor: AppColors.annualLabel,
+                iconBg: AppColors.annualBackground,
+                title: 'Annual Leave',
+                subtitle: 'Oct 12 - Oct 15 (4 Days)',
+                status: 'approved',
+              ),
+              Divider(height: 1, color: AppColors.borderLight),
+              _buildListItem(
+                icon: Icons.monitor_heart_outlined,
+                iconColor: AppColors.sickLabel,
+                iconBg: AppColors.sickBackground,
+                title: 'Sick Leave',
+                subtitle: 'Sep 28 (1 Day)',
+                status: 'pending',
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildListItem({
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBg,
+    required String title,
+    required String subtitle,
+    required String status,
+  }) {
+    return Padding(
+      padding: EdgeInsets.all(16.w),
+      child: Row(
+        children: [
+          Container(
+            width: 40.w,
+            height: 40.w,
+            decoration: BoxDecoration(
+              color: iconBg,
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            child: Icon(icon, color: iconColor, size: 20.w),
+          ),
+          SizedBox(width: 16.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          StatusPill(status: status),
+        ],
+      ),
+    );
+  }
+}
