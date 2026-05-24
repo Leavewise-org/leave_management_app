@@ -744,4 +744,10 @@ Future<List<SchoolEntity>> allSchools(AllSchoolsRef ref) {
 
 ---
 
+## License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+
+---
+
 *Leave Management System · Flutter + Supabase + Riverpod + Clean Architecture · Multi-Tenant*
