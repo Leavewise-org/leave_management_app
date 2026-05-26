@@ -113,7 +113,6 @@ class SignUpNotifier extends _$SignUpNotifier {
     required String email,
     required String password,
     required String fullName,
-    required String schoolSlug,
   }) async {
     state = state.copyWith(isLoading: true, clearFailure: true);
 
@@ -122,7 +121,6 @@ class SignUpNotifier extends _$SignUpNotifier {
             email: email,
             password: password,
             fullName: fullName,
-            schoolSlug: schoolSlug,
           );
 
       state = state.copyWith(isLoading: false, user: user);

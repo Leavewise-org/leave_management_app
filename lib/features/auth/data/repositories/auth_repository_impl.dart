@@ -59,14 +59,12 @@ class AuthRepositoryImpl implements AuthRepository {
     required String email,
     required String password,
     required String fullName,
-    required String schoolSlug,
   }) async {
     try {
       return await _datasource.signUp(
         email: email,
         password: password,
         fullName: fullName,
-        schoolSlug: schoolSlug,
       );
     } on FirebaseAuthException catch (e) {
       final msg = e.message?.toLowerCase() ?? '';
@@ -99,4 +97,22 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Stream<UserEntity?> authStateChanges() => _datasource.authStateChanges();
+
+  @override
+  Future<void> joinOrganization(String schoolId) async {
+    try {
+      await _datasource.joinOrganization(schoolId);
+    } catch (e) {
+      throw UnknownAuthFailure(e.toString());
+    }
+  }
+
+  @override
+  Future<void> createOrganization(String name, String address) async {
+    try {
+      await _datasource.createOrganization(name, address);
+    } catch (e) {
+      throw UnknownAuthFailure(e.toString());
+    }
+  }
 }

@@ -42,6 +42,7 @@ class UserEntity {
   bool get isManager => role == 'manager';
   bool get isSchoolAdmin => role == 'school_admin';
   bool get isSuperAdmin => role == 'super_admin';
+  bool get isPending => role == 'pending';
 
   /// Returns the user's initials for the avatar widget (max 2 chars).
   String get initials {

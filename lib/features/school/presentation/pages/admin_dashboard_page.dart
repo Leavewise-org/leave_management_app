@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:leave_management_app/core/constants/app_colors.dart';
 import 'package:leave_management_app/core/router/app_router.dart';
 import 'package:leave_management_app/shared/widgets/app_refresh_indicator.dart';
+import 'package:leave_management_app/features/auth/presentation/providers/auth_provider.dart';
 
 class AdminDashboardPage extends ConsumerWidget {
   const AdminDashboardPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    final user = authState.value;
+    final isManager = user?.isManager ?? false;
+    final canManageSchool = (user?.isSchoolAdmin ?? false) || (user?.isSuperAdmin ?? false);
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -57,6 +64,52 @@ class AdminDashboardPage extends ConsumerWidget {
                   color: AppColors.textSecondary,
                 ),
               ),
+              const SizedBox(height: 16),
+              if (user?.schoolId != null && user!.schoolId.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: InkWell(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(text: user.schoolId));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('School ID copied to clipboard!')),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySubtle,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.copy, size: 16, color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'School ID',
+                                style: TextStyle(fontSize: 10, color: AppColors.primaryText),
+                              ),
+                              Text(
+                                user.schoolId,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               const SizedBox(height: 24),
 
               // Quick Metrics
@@ -98,23 +151,49 @@ class AdminDashboardPage extends ConsumerWidget {
                   color: AppColors.textPrimary,
                 ),
               ),
-              const SizedBox(height: 16),
+              if (canManageSchool) ...[
+                _ActionCard(
+                  title: 'Employee Directory',
+                  subtitle: 'Manage roles, view balances, and remove users.',
+                  icon: Icons.manage_accounts_outlined,
+                  iconColor: AppColors.primary,
+                  onTap: () => context.push(AppRoutes.manageEmployees),
+                ),
+                const SizedBox(height: 12),
+                _ActionCard(
+                  title: 'School Settings',
+                  subtitle: 'Update policies, name, and default quotas.',
+                  icon: Icons.settings_outlined,
+                  iconColor: AppColors.textSecondary,
+                  onTap: () => context.push(AppRoutes.schoolSettings),
+                ),
+              ],
               
-              _ActionCard(
-                title: 'Employee Directory',
-                subtitle: 'Manage roles, view balances, and remove users.',
-                icon: Icons.manage_accounts_outlined,
-                iconColor: AppColors.primary,
-                onTap: () => context.push(AppRoutes.manageEmployees),
-              ),
-              const SizedBox(height: 12),
-              _ActionCard(
-                title: 'School Settings',
-                subtitle: 'Update policies, name, and default quotas.',
-                icon: Icons.settings_outlined,
-                iconColor: AppColors.textSecondary,
-                onTap: () => context.push(AppRoutes.schoolSettings),
-              ),
+              if (isManager) ...[
+                _ActionCard(
+                  title: 'Manager Approvals',
+                  subtitle: 'Review and approve leave requests from your team.',
+                  icon: Icons.fact_check_outlined,
+                  iconColor: AppColors.pending,
+                  onTap: () => context.push(AppRoutes.approvals),
+                ),
+                const SizedBox(height: 12),
+                _ActionCard(
+                  title: 'Team Directory',
+                  subtitle: 'View your team members and their leave balances.',
+                  icon: Icons.people_outline,
+                  iconColor: AppColors.primary,
+                  onTap: () => context.push(AppRoutes.teamOverview),
+                ),
+                const SizedBox(height: 12),
+                _ActionCard(
+                  title: 'Team Reports',
+                  subtitle: 'Analytics and leave reports for your department.',
+                  icon: Icons.analytics_outlined,
+                  iconColor: AppColors.primary,
+                  onTap: () => context.push(AppRoutes.reports),
+                ),
+              ],
             ],
           ),
         ),

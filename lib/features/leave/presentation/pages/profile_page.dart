@@ -141,48 +141,37 @@ class ProfilePage extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          if (isSuperAdmin) ...[
+          // View Switcher logic
+          if (isSuperAdmin && !GoRouterState.of(context).uri.toString().startsWith('/system')) ...[
             _buildMenuItem(
               icon: Icons.admin_panel_settings,
-              title: 'System Console',
+              title: 'Switch to System Console',
               iconColor: AppColors.primary,
               onTap: () {
-                context.push(AppRoutes.superAdminDashboard);
+                context.go(AppRoutes.superAdminDashboard);
               },
             ),
             Divider(height: 1, color: AppColors.borderLight, indent: 56.w),
           ],
-          if (isAdmin) ...[
+          if ((isAdmin || isManager) && !GoRouterState.of(context).uri.toString().startsWith('/school')) ...[
             _buildMenuItem(
               icon: Icons.admin_panel_settings_outlined,
-              title: 'Admin Console',
+              title: 'Switch to Admin Console',
               iconColor: AppColors.primary,
               onTap: () {
-                context.push(AppRoutes.adminDashboard);
+                context.go(AppRoutes.adminDashboard);
               },
             ),
             Divider(height: 1, color: AppColors.borderLight, indent: 56.w),
           ],
-          if (isManager) ...[
+          if ((isAdmin || isManager) && (GoRouterState.of(context).uri.toString().startsWith('/school') || GoRouterState.of(context).uri.toString().startsWith('/system'))) ...[
             _buildMenuItem(
-              icon: Icons.fact_check_outlined,
-              title: 'Manager Approvals',
-              iconColor: AppColors.pending,
-              onTap: () => context.push(AppRoutes.approvals),
-            ),
-            Divider(height: 1, color: AppColors.borderLight, indent: 56.w),
-            _buildMenuItem(
-              icon: Icons.people_outline,
-              title: 'Team Directory',
-              iconColor: AppColors.pending,
-              onTap: () => context.push(AppRoutes.teamOverview),
-            ),
-            Divider(height: 1, color: AppColors.borderLight, indent: 56.w),
-            _buildMenuItem(
-              icon: Icons.analytics_outlined,
-              title: 'Team Reports',
-              iconColor: AppColors.pending,
-              onTap: () => context.push(AppRoutes.reports),
+              icon: Icons.switch_account_outlined,
+              title: 'Switch to Employee View',
+              iconColor: AppColors.primary,
+              onTap: () {
+                context.go(AppRoutes.dashboard);
+              },
             ),
             Divider(height: 1, color: AppColors.borderLight, indent: 56.w),
           ],

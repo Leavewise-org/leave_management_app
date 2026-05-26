@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../domain/entities/user_entity.dart';
@@ -40,7 +41,6 @@ class AuthRemoteDatasource {
     required String email,
     required String password,
     required String fullName,
-    required String schoolSlug,
   }) async {
     final response = await _auth.createUserWithEmailAndPassword(
       email: email,
@@ -52,21 +52,10 @@ class AuthRemoteDatasource {
       throw FirebaseAuthException(code: 'sign-up-failed', message: 'Sign-up failed: no user returned.');
     }
 
-    // Resolve school ID from school slug.
-    // In a real app, you would query the 'schools' collection.
-    // For now we'll write the slug as schoolId since the db is empty
-    String schoolId = schoolSlug;
-    try {
-      final schoolQuery = await _firestore.collection('schools').where('slug', isEqualTo: schoolSlug).limit(1).get();
-      if (schoolQuery.docs.isNotEmpty) {
-        schoolId = schoolQuery.docs.first.id;
-      }
-    } catch (_) {}
-
     await _firestore.collection('profiles').doc(authUser.uid).set({
       'full_name': fullName,
-      'school_id': schoolId,
-      'role': 'employee',
+      'school_id': '', // Assigned during onboarding
+      'role': '', // Assigned during onboarding
     });
 
     return _fetchProfile(authUser);
@@ -93,14 +82,40 @@ class AuthRemoteDatasource {
 
   /// Emits [UserEntity] when a session is active, `null` otherwise.
   Stream<UserEntity?> authStateChanges() {
-    return _auth.authStateChanges().asyncMap((authUser) async {
-      if (authUser == null) return null;
-      try {
-        return await _fetchProfile(authUser);
-      } catch (_) {
-        return null;
-      }
-    });
+    late StreamController<UserEntity?> controller;
+    StreamSubscription<User?>? authSub;
+    StreamSubscription<DocumentSnapshot>? profileSub;
+
+    controller = StreamController<UserEntity?>(
+      onListen: () {
+        authSub = _auth.authStateChanges().listen((authUser) {
+          profileSub?.cancel();
+          if (authUser == null) {
+            controller.add(null);
+          } else {
+            profileSub = _firestore.collection('profiles').doc(authUser.uid).snapshots().listen(
+              (doc) {
+                try {
+                  controller.add(UserModel.fromFirebase(
+                    authUser: authUser,
+                    profileDoc: doc,
+                  ).toEntity());
+                } catch (_) {
+                  controller.add(null);
+                }
+              },
+              onError: (_) {},
+            );
+          }
+        });
+      },
+      onCancel: () {
+        authSub?.cancel();
+        profileSub?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
   // ── Private Helpers ──────────────────────────────────────────────
@@ -113,5 +128,35 @@ class AuthRemoteDatasource {
       authUser: authUser,
       profileDoc: doc,
     ).toEntity();
+  }
+
+  // ── Organizations ──────────────────────────────────────────────────
+
+  Future<void> joinOrganization(String schoolId) async {
+    final authUser = _auth.currentUser;
+    if (authUser == null) throw Exception('Not authenticated');
+
+    await _firestore.collection('profiles').doc(authUser.uid).update({
+      'school_id': schoolId,
+      'role': 'pending',
+    });
+  }
+
+  Future<void> createOrganization(String name, String address) async {
+    final authUser = _auth.currentUser;
+    if (authUser == null) throw Exception('Not authenticated');
+
+    final schoolRef = _firestore.collection('schools').doc();
+    await schoolRef.set({
+      'name': name,
+      'address': address,
+      'created_at': FieldValue.serverTimestamp(),
+      'created_by': authUser.uid,
+    });
+
+    await _firestore.collection('profiles').doc(authUser.uid).update({
+      'school_id': schoolRef.id,
+      'role': 'school_admin',
+    });
   }
 }
