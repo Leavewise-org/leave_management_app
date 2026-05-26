@@ -20,7 +20,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  final _tenantCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _obscurePass = true;
 
@@ -28,7 +27,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   void dispose() {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
-    _tenantCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
   }
@@ -41,7 +39,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           email: _emailCtrl.text.trim(),
           password: _passCtrl.text,
           fullName: _nameCtrl.text.trim(),
-          schoolSlug: _tenantCtrl.text.trim(),
         );
 
     if (mounted && ref.read(signUpNotifierProvider).isSuccess) {
@@ -130,24 +127,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Tenant ID
-                  const Text('School / Tenant ID', style: AppTextStyles.formLabel),
-                  const SizedBox(height: 8),
-                  _InputField(
-                    controller: _tenantCtrl,
-                    hintText: 'e.g. ananda-college',
-                    prefixIcon: const Icon(Icons.business_rounded, size: 18, color: AppColors.textTertiary),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) return AppStrings.fieldRequired;
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Ask your IT admin for this isolated workspace code.',
-                    style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
-                  ),
-                  const SizedBox(height: 16),
 
                   // Password
                   const Text('Password', style: AppTextStyles.formLabel),

@@ -1,272 +1,198 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:leave_management_app/core/constants/app_colors.dart';
-import 'package:leave_management_app/shared/widgets/status_pill.dart';
+import 'package:leave_management_app/features/auth/domain/entities/user_entity.dart';
+import 'package:leave_management_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:leave_management_app/features/school/presentation/providers/school_providers.dart';
 
-class TeamViewPage extends StatelessWidget {
+class TeamViewPage extends ConsumerWidget {
   const TeamViewPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    final currentUser = authState.value;
+    
+    if (currentUser == null || currentUser.schoolId.isEmpty) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final usersAsync = ref.watch(schoolUsersProvider(currentUser.schoolId));
+
     return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white),
+          icon: const Icon(Icons.chevron_left_rounded, color: AppColors.textPrimary, size: 28),
           onPressed: () => context.pop(),
         ),
-        title: Text(
+        title: const Text(
           'Team Directory',
           style: TextStyle(
-            color: Colors.white,
-            fontSize: 20.sp,
-            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w700,
+            fontSize: 20,
           ),
         ),
-        bottom: PreferredSize(
-          preferredSize: Size.fromHeight(60.h),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(24.w, 0, 24.w, 16.h),
-            child: TextField(
-              decoration: InputDecoration(
-                hintText: 'Search team members...',
-                hintStyle: TextStyle(color: AppColors.textSecondary, fontSize: 14.sp),
-                prefixIcon: Icon(Icons.search, color: AppColors.textSecondary, size: 20.sp),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: EdgeInsets.symmetric(vertical: 0.h),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12.r),
-                  borderSide: BorderSide.none,
+        centerTitle: true,
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                child: const TextField(
+                  decoration: InputDecoration(
+                    icon: Icon(Icons.search, color: AppColors.textSecondary),
+                    hintText: 'Search team members...',
+                    border: InputBorder.none,
+                    hintStyle: TextStyle(color: AppColors.textSecondary, fontSize: 15),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
-      ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-              child: Column(
-                children: [
-                  _buildStatsRow(),
-                  SizedBox(height: 24.h),
-                  _buildTeamList(),
-                  SizedBox(height: 80.h),
-                ],
+            Expanded(
+              child: usersAsync.when(
+                data: (users) {
+                  final pendingUsers = users.where((u) => u.isPending).toList();
+                  final activeUsers = users.where((u) => !u.isPending).toList();
+
+                  if (users.isEmpty) {
+                    return const Center(child: Text('No team members found.'));
+                  }
+
+                  return ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                    children: [
+                      if (pendingUsers.isNotEmpty) ...[
+                        const Text(
+                          'Pending Approvals',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.pendingText),
+                        ),
+                        const SizedBox(height: 12),
+                        ...pendingUsers.map((u) => _TeamMemberItem(user: u, isCurrentUser: u.id == currentUser.id)),
+                        const SizedBox(height: 24),
+                      ],
+                      if (activeUsers.isNotEmpty) ...[
+                        const Text(
+                          'Active Members',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        ),
+                        const SizedBox(height: 12),
+                        ...activeUsers.map((u) => _TeamMemberItem(user: u, isCurrentUser: u.id == currentUser.id)),
+                      ],
+                    ],
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, st) => Center(child: Text('Error: $e')),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
+}
 
-  Widget _buildStatsRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildStatBox(
-            val: '08',
-            label: 'Total',
-            valColor: AppColors.textPrimary,
-            labelColor: AppColors.textSecondary,
-            bgColor: Colors.white,
-            borderColor: AppColors.borderLight,
-          ),
-        ),
-        SizedBox(width: 12.w),
-        Expanded(
-          child: _buildStatBox(
-            val: '05',
-            label: 'Active',
-            valColor: AppColors.approvedText,
-            labelColor: AppColors.approvedText,
-            bgColor: AppColors.approvedBackground,
-            borderColor: AppColors.approvedBackground,
-          ),
-        ),
-        SizedBox(width: 12.w),
-        Expanded(
-          child: _buildStatBox(
-            val: '03',
-            label: 'On Leave',
-            valColor: AppColors.pendingText,
-            labelColor: AppColors.pendingText,
-            bgColor: AppColors.pendingBackground,
-            borderColor: AppColors.pendingBackground,
-          ),
-        ),
-      ],
-    );
-  }
+class _TeamMemberItem extends ConsumerWidget {
+  final UserEntity user;
+  final bool isCurrentUser;
+  
+  const _TeamMemberItem({required this.user, required this.isCurrentUser});
 
-  Widget _buildStatBox({
-    required String val,
-    required String label,
-    required Color valColor,
-    required Color labelColor,
-    required Color bgColor,
-    required Color borderColor,
-  }) {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: 16.h),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(16.r),
-        border: Border.all(color: borderColor),
+        color: user.isPending ? AppColors.pendingBackground : AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: user.isPending ? AppColors.pending : AppColors.border),
       ),
-      child: Column(
-        children: [
-          Text(
-            val,
-            style: TextStyle(
-              fontSize: 24.sp,
-              fontWeight: FontWeight.bold,
-              color: valColor,
-            ),
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w500,
-              color: labelColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTeamList() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: AppColors.borderLight),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 8.h),
-            child: Text(
-              'Engineering Dept',
-              style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
-            ),
-          ),
-          _buildListItem(
-            avatar: 'NP',
-            avatarColor: const Color(0xFF0EA5E9),
-            name: 'Nuwan Perera',
-            role: 'Backend Developer',
-            status: 'approved', // Maps to Green (Working)
-          ),
-          Divider(height: 1, color: AppColors.borderLight),
-          _buildListItem(
-            avatar: 'SR',
-            avatarColor: const Color(0xFF10B981),
-            name: 'Sajith Sampath',
-            role: 'Software Engineer',
-            status: 'approved',
-          ),
-          Divider(height: 1, color: AppColors.borderLight),
-          _buildListItem(
-            avatar: 'DP',
-            avatarColor: const Color(0xFF8B5CF6),
-            name: 'Dilani Prasad',
-            role: 'DevOps Engineer',
-            status: 'pending', // Maps to Amber (On Leave)
-          ),
-          
-          Padding(
-            padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 8.h),
-            child: Text(
-              'QA & Design',
-              style: TextStyle(fontSize: 13.sp, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
-            ),
-          ),
-          Divider(height: 1, color: AppColors.borderLight),
-          _buildListItem(
-            avatar: 'AF',
-            avatarColor: const Color(0xFFF43F5E),
-            name: 'Amali Fernando',
-            role: 'QA Engineer',
-            status: 'pending',
-          ),
-          Divider(height: 1, color: AppColors.borderLight),
-          _buildListItem(
-            avatar: 'KJ',
-            avatarColor: const Color(0xFFF59E0B),
-            name: 'Kasun Jayawardena',
-            role: 'UI Designer',
-            status: 'approved',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildListItem({
-    required String avatar,
-    required Color avatarColor,
-    required String name,
-    required String role,
-    required String status,
-  }) {
-    return Padding(
-      padding: EdgeInsets.all(16.w),
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: avatarColor,
-            radius: 20.r,
+            backgroundColor: user.isManager || user.isSchoolAdmin ? AppColors.primaryLight : AppColors.quickBlueBackground,
+            foregroundColor: AppColors.primary,
+            radius: 24,
             child: Text(
-              avatar,
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14.sp),
+              user.initials,
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
-          SizedBox(width: 16.w),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        user.fullName + (isCurrentUser ? ' (You)' : ''),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 2.h),
+                const SizedBox(height: 4),
                 Text(
-                  role,
+                  user.isPending ? 'Pending Approval' : _formatRole(user.role),
                   style: TextStyle(
-                    fontSize: 12.sp,
-                    color: AppColors.textSecondary,
+                    fontSize: 13,
+                    color: user.isPending ? AppColors.pendingText : AppColors.textSecondary,
+                    fontWeight: user.isPending ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ],
             ),
           ),
-          StatusPill(status: status), // We can tweak StatusPill later to take custom text if needed
+          if (user.isPending)
+            TextButton(
+              onPressed: () async {
+                final repo = ref.read(schoolRepositoryProvider);
+                await repo.updateUserRole(user.id, 'employee');
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${user.fullName} approved!')),
+                  );
+                }
+              },
+              style: TextButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+              child: const Text('Approve', style: TextStyle(fontWeight: FontWeight.bold)),
+            )
         ],
       ),
     );
+  }
+
+  String _formatRole(String role) {
+    if (role == 'school_admin') return 'School Admin';
+    if (role == 'super_admin') return 'Super Admin';
+    if (role == 'manager') return 'Manager';
+    return 'Employee';
   }
 }

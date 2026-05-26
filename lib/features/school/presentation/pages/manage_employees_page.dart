@@ -2,12 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:leave_management_app/core/constants/app_colors.dart';
+import 'package:leave_management_app/features/auth/domain/entities/user_entity.dart';
+import 'package:leave_management_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:leave_management_app/features/school/presentation/providers/school_providers.dart';
 
 class ManageEmployeesPage extends ConsumerWidget {
   const ManageEmployeesPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final authState = ref.watch(authStateProvider);
+    final currentUser = authState.value;
+    
+    if (currentUser == null || currentUser.schoolId.isEmpty) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    final usersAsync = ref.watch(schoolUsersProvider(currentUser.schoolId));
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -50,13 +62,40 @@ class ManageEmployeesPage extends ConsumerWidget {
               ),
             ),
             Expanded(
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                itemCount: 5,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  return _EmployeeListItem(index: index);
+              child: usersAsync.when(
+                data: (users) {
+                  final pendingUsers = users.where((u) => u.isPending).toList();
+                  final activeUsers = users.where((u) => !u.isPending).toList();
+
+                  if (users.isEmpty) {
+                    return const Center(child: Text('No employees found.'));
+                  }
+
+                  return ListView(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                    children: [
+                      if (pendingUsers.isNotEmpty) ...[
+                        const Text(
+                          'Pending Approvals',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.pendingText),
+                        ),
+                        const SizedBox(height: 12),
+                        ...pendingUsers.map((u) => _EmployeeListItem(user: u, isCurrentUser: u.id == currentUser.id)),
+                        const SizedBox(height: 24),
+                      ],
+                      if (activeUsers.isNotEmpty) ...[
+                        const Text(
+                          'Active Employees',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                        ),
+                        const SizedBox(height: 12),
+                        ...activeUsers.map((u) => _EmployeeListItem(user: u, isCurrentUser: u.id == currentUser.id)),
+                      ],
+                    ],
+                  );
                 },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, st) => Center(child: Text('Error: $e')),
               ),
             ),
           ],
@@ -66,29 +105,30 @@ class ManageEmployeesPage extends ConsumerWidget {
   }
 }
 
-class _EmployeeListItem extends StatelessWidget {
-  final int index;
-  const _EmployeeListItem({required this.index});
+class _EmployeeListItem extends ConsumerWidget {
+  final UserEntity user;
+  final bool isCurrentUser;
+  
+  const _EmployeeListItem({required this.user, required this.isCurrentUser});
 
   @override
-  Widget build(BuildContext context) {
-    final bool isManager = index == 0;
-    
+  Widget build(BuildContext context, WidgetRef ref) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: user.isPending ? AppColors.pendingBackground : AppColors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: user.isPending ? AppColors.pending : AppColors.border),
       ),
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: isManager ? AppColors.primaryLight : AppColors.quickBlueBackground,
-            foregroundColor: isManager ? AppColors.primary : AppColors.primary,
+            backgroundColor: user.isManager || user.isSchoolAdmin ? AppColors.primaryLight : AppColors.quickBlueBackground,
+            foregroundColor: AppColors.primary,
             radius: 24,
             child: Text(
-              isManager ? 'JD' : 'E$index',
+              user.initials,
               style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ),
@@ -97,48 +137,94 @@ class _EmployeeListItem extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  isManager ? 'John Doe' : 'Employee $index',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        user.fullName + (isCurrentUser ? ' (You)' : ''),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textPrimary,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  isManager ? 'Manager' : 'Employee',
-                  style: const TextStyle(
+                  user.isPending ? 'Pending Approval' : _formatRole(user.role),
+                  style: TextStyle(
                     fontSize: 13,
-                    color: AppColors.textSecondary,
+                    color: user.isPending ? AppColors.pendingText : AppColors.textSecondary,
+                    fontWeight: user.isPending ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
               ],
             ),
           ),
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
-            onSelected: (value) {
-              // Handle action
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              const PopupMenuItem<String>(
-                value: 'role',
-                child: Text('Change Role'),
+          if (user.isPending)
+            TextButton(
+              onPressed: () async {
+                final repo = ref.read(schoolRepositoryProvider);
+                await repo.updateUserRole(user.id, 'employee');
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${user.fullName} approved!')),
+                  );
+                }
+              },
+              style: TextButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
-              const PopupMenuItem<String>(
-                value: 'balances',
-                child: Text('View Balances'),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem<String>(
-                value: 'remove',
-                child: Text('Deactivate User', style: TextStyle(color: AppColors.rejectedText)),
-              ),
-            ],
-          ),
+              child: const Text('Approve', style: TextStyle(fontWeight: FontWeight.bold)),
+            )
+          else
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: AppColors.textSecondary),
+              onSelected: (value) async {
+                final repo = ref.read(schoolRepositoryProvider);
+                if (value == 'make_manager') {
+                  await repo.updateUserRole(user.id, 'manager');
+                } else if (value == 'make_employee') {
+                  await repo.updateUserRole(user.id, 'employee');
+                } else if (value == 'remove') {
+                  // In a real app we'd probably soft delete or clear school_id
+                  await repo.updateUserRole(user.id, 'removed');
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                if (!user.isManager && !user.isSchoolAdmin)
+                  const PopupMenuItem<String>(
+                    value: 'make_manager',
+                    child: Text('Make Manager'),
+                  ),
+                if (user.isManager && !user.isSchoolAdmin)
+                  const PopupMenuItem<String>(
+                    value: 'make_employee',
+                    child: Text('Demote to Employee'),
+                  ),
+                const PopupMenuDivider(),
+                const PopupMenuItem<String>(
+                  value: 'remove',
+                  child: Text('Deactivate User', style: TextStyle(color: AppColors.rejectedText)),
+                ),
+              ],
+            ),
         ],
       ),
     );
+  }
+
+  String _formatRole(String role) {
+    if (role == 'school_admin') return 'School Admin';
+    if (role == 'super_admin') return 'Super Admin';
+    if (role == 'manager') return 'Manager';
+    return 'Employee';
   }
 }

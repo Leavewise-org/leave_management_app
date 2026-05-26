@@ -5,12 +5,14 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:leave_management_app/shared/placeholder/placeholder_page.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
 
 // Auth & Dashboard
+import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/auth/presentation/pages/organization_onboarding_page.dart';
 import '../../features/leave/presentation/pages/dashboard_page.dart';
 import '../../features/leave/presentation/pages/apply_leave_page.dart';
 import '../../features/leave/presentation/pages/leave_history_page.dart';
@@ -28,6 +30,7 @@ import '../../features/super_admin/presentation/pages/manage_schools_page.dart';
 import '../../features/super_admin/presentation/pages/system_settings_page.dart';
 
 import 'main_shell_page.dart';
+import 'admin_shell_page.dart';
 
 part 'app_router.g.dart';
 
@@ -57,21 +60,19 @@ abstract class AppRoutes {
   static const String systemSettings = '/system/settings';
 }
 
-// ── Auth listenable (no Riverpod chain involved) ───────────────────
-/// Wraps Firebase's authStateChanges as a [Listenable] for GoRouter.
-/// This avoids all Riverpod provider chain / rebuild issues.
-class _FirebaseAuthNotifier extends ChangeNotifier {
-  _FirebaseAuthNotifier() {
-    _sub = FirebaseAuth.instance.authStateChanges().listen((_) {
-      notifyListeners();
-    });
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen(
+      (dynamic _) => notifyListeners(),
+    );
   }
 
-  late final StreamSubscription<User?> _sub;
+  late final StreamSubscription<dynamic> _subscription;
 
   @override
   void dispose() {
-    _sub.cancel();
+    _subscription.cancel();
     super.dispose();
   }
 }
@@ -79,43 +80,62 @@ class _FirebaseAuthNotifier extends ChangeNotifier {
 // ── Router provider ────────────────────────────────────────────────
 @Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
-  final authNotifier = _FirebaseAuthNotifier();
+  final authStream = ref.watch(authStateProvider.stream);
+  final notifier = GoRouterRefreshStream(authStream);
 
   ref.onDispose(() {
-    authNotifier.dispose();
+    notifier.dispose();
   });
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,
-    refreshListenable: authNotifier,
+    refreshListenable: notifier,
 
     redirect: (context, state) {
-      // Check the live session directly — no Riverpod, no streams, no asyncMap
-      final currentUser = FirebaseAuth.instance.currentUser;
-      final isLoggedIn = currentUser != null;
+      final userState = ref.read(authStateProvider);
+      
+      // If the stream is still loading its very first value, wait in splash
+      if (userState.isLoading && !userState.hasValue) {
+        return AppRoutes.splash;
+      }
+      
+      final user = userState.hasError ? null : userState.valueOrNull;
+      final isLoggedIn = user != null;
       final location = state.matchedLocation;
 
       final isSplash = location == AppRoutes.splash;
       final isLogin = location == AppRoutes.login;
       final isRegister = location == AppRoutes.register;
+      final isOnboarding = location == AppRoutes.schoolOnboarding;
 
-      // 1. Splash → decide where to go
-      if (isSplash) {
-        return isLoggedIn ? AppRoutes.dashboard : AppRoutes.login;
-      }
-
-      // 2. Not logged in + trying to access a protected page → login
-      if (!isLoggedIn && !isLogin && !isRegister) {
+      // 1. Not logged in -> send to login (unless already there)
+      if (!isLoggedIn) {
+        if (isLogin || isRegister) return null;
         return AppRoutes.login;
       }
 
-      // 3. Logged in + on the login/register page → dashboard
-      if (isLoggedIn && (isLogin || isRegister)) {
+      // 2. Logged in -> check onboarding / pending state
+      final schoolId = user.schoolId;
+      final role = user.role;
+
+      // Needs to pick a school
+      if (schoolId.isEmpty || schoolId == 'unknown') {
+        if (!isOnboarding) return AppRoutes.schoolOnboarding;
+        return null; // Stay on onboarding
+      }
+
+      // Waiting for approval is now handled natively in the dashboard, so no redirect here.
+
+      // Fully onboarded -> send away from splash/login/onboarding
+      if (isSplash || isLogin || isRegister || isOnboarding) {
+        // If owner/admin/manager -> Admin Dashboard
+        if (user.isSchoolAdmin || user.isSuperAdmin || user.isManager) {
+           return AppRoutes.adminDashboard;
+        }
         return AppRoutes.dashboard;
       }
 
-      // No redirect needed
       return null;
     },
 
@@ -215,21 +235,49 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const ReportsPage(),
       ),
 
-      // School admin routes
-      GoRoute(
-        path: AppRoutes.adminDashboard,
-        name: 'adminDashboard',
-        builder: (context, state) => const AdminDashboardPage(),
-      ),
-      GoRoute(
-        path: AppRoutes.manageEmployees,
-        name: 'manageEmployees',
-        builder: (context, state) => const ManageEmployeesPage(),
-      ),
-      GoRoute(
-        path: AppRoutes.schoolSettings,
-        name: 'schoolSettings',
-        builder: (context, state) => const SchoolSettingsPage(),
+      // School admin shell — Dashboard + nested tabs
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return AdminShellPage(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.adminDashboard,
+                name: 'adminDashboard',
+                builder: (context, state) => const AdminDashboardPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.manageEmployees,
+                name: 'manageEmployees',
+                builder: (context, state) => const ManageEmployeesPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.schoolSettings,
+                name: 'schoolSettings',
+                builder: (context, state) => const SchoolSettingsPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/school/profile',
+                name: 'adminProfile',
+                builder: (context, state) => const ProfilePage(),
+              ),
+            ],
+          ),
+        ],
       ),
 
       // Super admin routes
@@ -254,7 +302,7 @@ GoRouter appRouter(Ref ref) {
         path: AppRoutes.schoolOnboarding,
         name: 'schoolOnboarding',
         builder: (context, state) =>
-            const PlaceholderPage(label: 'School Onboarding'),
+            const OrganizationOnboardingPage(),
       ),
     ],
 

@@ -36,9 +36,24 @@ class UserModel {
     return UserModel(
       id: authUser.uid,
       email: authUser.email ?? '',
-      schoolId: data['school_id'] as String? ?? 'unknown',
+      schoolId: data['school_id'] as String? ?? '',
       fullName: data['full_name'] as String? ?? 'Unknown User',
-      role: data['role'] as String? ?? 'employee',
+      role: data['role'] as String? ?? '',
+      departmentId: data['department_id'] as String?,
+      avatarUrl: data['avatar_url'] as String?,
+      fcmToken: data['fcm_token'] as String?,
+    );
+  }
+
+  /// Builds a [UserModel] from just a `profiles` document. Email will be empty.
+  factory UserModel.fromProfileDoc(DocumentSnapshot<Map<String, dynamic>> profileDoc) {
+    final data = profileDoc.data() ?? {};
+    return UserModel(
+      id: profileDoc.id,
+      email: '', // Not available in profiles collection
+      schoolId: data['school_id'] as String? ?? '',
+      fullName: data['full_name'] as String? ?? 'Unknown User',
+      role: data['role'] as String? ?? '',
       departmentId: data['department_id'] as String?,
       avatarUrl: data['avatar_url'] as String?,
       fcmToken: data['fcm_token'] as String?,

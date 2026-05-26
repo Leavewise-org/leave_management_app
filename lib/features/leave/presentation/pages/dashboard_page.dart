@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +24,7 @@ class DashboardPage extends ConsumerWidget {
     
     final userName = user?.fullName ?? 'Employee Name';
     final userInitials = user?.initials ?? 'EMP';
+    final isPending = user?.role == 'pending';
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -35,7 +37,7 @@ class DashboardPage extends ConsumerWidget {
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            _buildAppBar(userName, userInitials),
+            _buildAppBar(userName, userInitials, user?.schoolId ?? '', context),
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.all(24.w),
@@ -44,9 +46,13 @@ class DashboardPage extends ConsumerWidget {
                   children: [
                     _buildBalances(ref, user?.id),
                     SizedBox(height: 32.h),
-                    _buildQuickActions(context),
-                    SizedBox(height: 32.h),
-                    _buildRecentRequests(ref, user?.id),
+                    if (isPending)
+                      _buildPendingWarning()
+                    else ...[
+                      _buildQuickActions(context),
+                      SizedBox(height: 32.h),
+                      _buildRecentRequests(ref, user?.id),
+                    ],
                     SizedBox(height: 80.h), // padding for bottom nav
                   ],
                 ),
@@ -58,9 +64,9 @@ class DashboardPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildAppBar(String name, String initials) {
+  Widget _buildAppBar(String name, String initials, String schoolId, BuildContext context) {
     return SliverAppBar(
-      expandedHeight: 100.h,
+      expandedHeight: 120.h,
       floating: false,
       pinned: true,
       elevation: 0,
@@ -73,27 +79,57 @@ class DashboardPage extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Good morning,',
-                      style: TextStyle(
-                        fontSize: 13.sp,
-                        color: Colors.white.withOpacity(0.8),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Good morning,',
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
                       ),
-                    ),
-                    Text(
-                      name,
-                      style: TextStyle(
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                      Text(
+                        name,
+                        style: TextStyle(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                      SizedBox(height: 4.h),
+                      if (schoolId.isNotEmpty)
+                        InkWell(
+                          onTap: () {
+                            Clipboard.setData(ClipboardData(text: schoolId));
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('School ID copied to clipboard!')),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(4.r),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'School ID: $schoolId',
+                                style: TextStyle(
+                                  fontSize: 12.sp,
+                                  color: Colors.white.withOpacity(0.9),
+                                ),
+                              ),
+                              SizedBox(width: 4.w),
+                              Icon(Icons.copy, color: Colors.white, size: 14.sp),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
+                SizedBox(width: 16.w),
                 Stack(
                   alignment: Alignment.topRight,
                   children: [
@@ -254,6 +290,46 @@ class DashboardPage extends ConsumerWidget {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildPendingWarning() {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(24.w),
+      decoration: BoxDecoration(
+        color: AppColors.pendingBackground,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.pending.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.hourglass_empty, color: AppColors.pending, size: 24.w),
+              SizedBox(width: 12.w),
+              Text(
+                'Waiting for Approval',
+                style: TextStyle(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.pendingText,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          Text(
+            'Your account is currently pending. You will not be able to apply for leave until your School Admin or Manager approves your account.',
+            style: TextStyle(
+              fontSize: 14.sp,
+              color: AppColors.pendingText.withOpacity(0.8),
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

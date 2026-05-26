@@ -24,9 +24,13 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         request.auth.uid == userId ||
         getMyRole() == 'super_admin' ||
-        (isMySchool(resource.data.schoolId) && getMyRole() in ['manager', 'school_admin'])
+        (isMySchool(resource.data.school_id) && getMyRole() in ['manager', 'school_admin'])
       );
-      allow write: if isAuthenticated() && request.auth.uid == userId;
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        (isMySchool(resource.data.school_id) && getMyRole() in ['manager', 'school_admin'])
+      );
     }
 
     // ── LEAVE REQUESTS ────────────────────────
@@ -63,10 +67,17 @@ service cloud.firestore {
 
     // ── SCHOOLS ───────────────────────────────
     match /schools/{schoolId} {
-      allow read: if isAuthenticated() && (
-        getMyRole() == 'super_admin' || isMySchool(schoolId)
+      // Anyone logged in can read a school to verify the ID when joining
+      allow read: if isAuthenticated(); 
+      
+      // Anyone logged in can create a new school during onboarding
+      allow create: if isAuthenticated(); 
+      
+      // Only Super Admins or the School Admin for that specific school can edit it later
+      allow update, delete: if isAuthenticated() && (
+        getMyRole() == 'super_admin' || 
+        (isMySchool(schoolId) && getMyRole() == 'school_admin')
       );
-      allow write: if isAuthenticated() && getMyRole() == 'super_admin';
     }
   }
 }
