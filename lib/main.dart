@@ -3,7 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'firebase_options.dart';
+import 'custom_firebase_options.dart';
 
 import 'core/router/app_router.dart';
 import 'shared/theme/app_theme.dart';
@@ -13,7 +13,7 @@ Future<void> main() async {
   await dotenv.load(fileName: '.env');
   try {
     await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
+      options: CustomFirebaseOptions.currentPlatform,
     );
     debugPrint('✅ Firebase initialized successfully');
   } catch (e) {
