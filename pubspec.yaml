@@ -65,6 +65,14 @@ dev_dependencies:
   freezed: ^3.0.6
   json_serializable: ^6.9.5
   mocktail: ^1.0.5
+  flutter_launcher_icons: ^0.13.1
+  rename: ^3.1.0
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/app_icon.png"
+
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
