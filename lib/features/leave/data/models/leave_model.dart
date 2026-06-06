@@ -13,6 +13,7 @@ class LeaveModel extends LeaveEntity {
     required super.reason,
     required super.status,
     super.attachmentUrl,
+    super.isHalfDay = false,
     required super.createdAt,
   });
 
@@ -28,6 +29,7 @@ class LeaveModel extends LeaveEntity {
       reason: json['reason'] as String? ?? '',
       status: json['status'] as String? ?? 'pending',
       attachmentUrl: json['attachmentUrl'] as String?,
+      isHalfDay: json['isHalfDay'] as bool? ?? false,
       createdAt: (json['createdAt'] as Timestamp).toDate(),
     );
   }
@@ -43,6 +45,7 @@ class LeaveModel extends LeaveEntity {
       'reason': reason,
       'status': status,
       'attachmentUrl': attachmentUrl,
+      'isHalfDay': isHalfDay,
       'createdAt': Timestamp.fromDate(createdAt),
     };
   }
@@ -59,6 +62,7 @@ class LeaveModel extends LeaveEntity {
       reason: entity.reason,
       status: entity.status,
       attachmentUrl: entity.attachmentUrl,
+      isHalfDay: entity.isHalfDay,
       createdAt: entity.createdAt,
     );
   }

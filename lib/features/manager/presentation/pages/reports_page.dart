@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:leave_management_app/core/constants/app_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:leave_management_app/features/school/presentation/providers/school_providers.dart';
 
-class ReportsPage extends StatelessWidget {
+class ReportsPage extends ConsumerWidget {
   const ReportsPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final schoolAsync = ref.watch(currentSchoolProvider);
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
@@ -44,7 +48,14 @@ class ReportsPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildUsageCard(),
+                  schoolAsync.when(
+                    data: (school) {
+                      if (school == null) return const Center(child: Text('School not found'));
+                      return _buildUsageCard(school.leavePolicies);
+                    },
+                    loading: () => const Center(child: CircularProgressIndicator()),
+                    error: (err, _) => Center(child: Text('Error: $err')),
+                  ),
                   SizedBox(height: 24.h),
                   _buildTopTakersSection(),
                   SizedBox(height: 80.h),
@@ -57,7 +68,7 @@ class ReportsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildUsageCard() {
+  Widget _buildUsageCard(Map<String, int> leavePolicies) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -76,15 +87,21 @@ class ReportsPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Team Usage (May \'26)',
+            'Team Quotas',
             style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
           ),
           SizedBox(height: 20.h),
-          _buildProgressBar('Annual Leave', '42 Days', 0.65, AppColors.primary),
-          SizedBox(height: 16.h),
-          _buildProgressBar('Sick Leave', '18 Days', 0.45, AppColors.sickLabel),
-          SizedBox(height: 16.h),
-          _buildProgressBar('Casual Leave', '9 Days', 0.25, AppColors.pendingText),
+          ...leavePolicies.entries.map((e) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: 16.h),
+              child: _buildProgressBar(
+                e.key, 
+                e.value > 0 ? '${e.value} Days' : 'No Quota', 
+                0.0, // No usage data yet
+                AppColors.primary
+              ),
+            );
+          }),
         ],
       ),
     );

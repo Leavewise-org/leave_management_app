@@ -13,6 +13,8 @@ import 'package:intl/intl.dart';
 import 'package:leave_management_app/features/leave/domain/entities/leave_entity.dart';
 import 'package:leave_management_app/features/leave/presentation/providers/leave_providers.dart';
 import 'package:leave_management_app/shared/widgets/app_refresh_indicator.dart';
+import 'package:leave_management_app/features/school/presentation/providers/school_providers.dart';
+import 'package:leave_management_app/core/utils/leave_theme_util.dart';
 
 class DashboardPage extends ConsumerWidget {
   const DashboardPage({super.key});
@@ -176,120 +178,126 @@ class DashboardPage extends ConsumerWidget {
   }
 
   Widget _buildBalances(WidgetRef ref, String? userId) {
-    int annualTaken = 0;
-    int sickTaken = 0;
-    int casualTaken = 0;
-    int unpaidTaken = 0;
+    if (userId == null) return const SizedBox.shrink();
 
-    if (userId != null) {
-      final leavesAsync = ref.watch(userLeavesProvider(userId));
-      leavesAsync.whenData((leaves) {
-        for (final leave in leaves) {
-          if (leave.status == 'approved' || leave.status == 'pending') {
-            switch (leave.leaveType) {
-              case 'Annual':
-                annualTaken += leave.durationDays;
-                break;
-              case 'Sick':
-                sickTaken += leave.durationDays;
-                break;
-              case 'Casual':
-                casualTaken += leave.durationDays;
-                break;
-              default:
+    final schoolAsync = ref.watch(currentSchoolProvider);
+    final leavesAsync = ref.watch(userLeavesProvider(userId));
+
+    return schoolAsync.when(
+      data: (school) {
+        if (school == null) return const Center(child: Text('School not found'));
+        
+        final policies = school.leavePolicies;
+        final takenMap = <String, double>{};
+        double unpaidTaken = 0;
+
+        leavesAsync.whenData((leaves) {
+          for (final leave in leaves) {
+            if (leave.status == 'approved' || leave.status == 'pending') {
+              if (policies.containsKey(leave.leaveType) && policies[leave.leaveType]! > 0) {
+                takenMap[leave.leaveType] = (takenMap[leave.leaveType] ?? 0) + leave.durationDays;
+              } else {
                 unpaidTaken += leave.durationDays;
+              }
             }
           }
+        });
+
+        // We want to group BalanceCards in pairs
+        final List<Widget> balanceCards = [];
+        
+        policies.forEach((type, quota) {
+          if (quota > 0) {
+            final double taken = takenMap[type] ?? 0.0;
+            final double left = quota - taken;
+            
+            // Format to show .5 if needed, else whole number
+            final String leftStr = left == left.truncateToDouble() 
+                ? left.toInt().toString().padLeft(2, '0') 
+                : left.toString();
+            
+            final theme = LeaveThemeUtil.getTheme(type);
+
+            balanceCards.add(
+              BalanceCard(
+                title: type,
+                value: leftStr,
+                subtitle: 'of $quota days left',
+                icon: theme.icon,
+                baseColor: theme.baseColor,
+                backgroundColor: theme.backgroundColor,
+              )
+            );
+          }
+        });
+
+        // Always show unpaid or 0 quota taken
+        // Format unpaid to show .5 if needed
+        final String unpaidStr = unpaidTaken == unpaidTaken.truncateToDouble()
+            ? unpaidTaken.toInt().toString().padLeft(2, '0')
+            : unpaidTaken.toString();
+
+        balanceCards.add(
+          BalanceCard(
+            title: 'Unpaid / Extra',
+            value: unpaidStr,
+            subtitle: 'days taken',
+            icon: Icons.money_off,
+            baseColor: AppColors.unpaidLabel,
+            backgroundColor: Colors.transparent,
+          )
+        );
+
+        final List<Widget> rows = [];
+        for (int i = 0; i < balanceCards.length; i += 2) {
+          rows.add(
+            Row(
+              children: [
+                Expanded(child: balanceCards[i]),
+                SizedBox(width: 12.w),
+                if (i + 1 < balanceCards.length)
+                  Expanded(child: balanceCards[i + 1])
+                else
+                  Expanded(child: const SizedBox()),
+              ],
+            )
+          );
+          if (i + 2 < balanceCards.length) {
+            rows.add(SizedBox(height: 12.h));
+          }
         }
-      });
-    }
 
-    final int annualTotal = 20;
-    final int sickTotal = 10;
-    final int casualTotal = 3;
-
-    final String annualLeft = (annualTotal - annualTaken).toString().padLeft(2, '0');
-    final String sickLeft = (sickTotal - sickTaken).toString().padLeft(2, '0');
-    final String casualLeft = (casualTotal - casualTaken).toString().padLeft(2, '0');
-    final String unpaidStr = unpaidTaken.toString().padLeft(2, '0');
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'My Balances',
-              style: TextStyle(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'My Balances',
+                  style: TextStyle(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                Text(
+                  'Details',
+                  style: TextStyle(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
             ),
-            Text(
-              'Details',
-              style: TextStyle(
-                fontSize: 13.sp,
-                fontWeight: FontWeight.w500,
-                color: AppColors.primary,
-              ),
-            ),
+            SizedBox(height: 16.h),
+            ...rows,
           ],
-        ),
-        SizedBox(height: 16.h),
-        Row(
-          children: [
-            Expanded(
-              child: BalanceCard(
-                title: 'Annual',
-                value: annualLeft,
-                subtitle: 'of $annualTotal days left',
-                icon: Icons.wb_sunny_outlined,
-                baseColor: AppColors.annualLabel,
-                backgroundColor: AppColors.annualBackground,
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: BalanceCard(
-                title: 'Sick',
-                value: sickLeft,
-                subtitle: 'of $sickTotal days left',
-                icon: Icons.monitor_heart_outlined,
-                baseColor: AppColors.sickLabel,
-                backgroundColor: AppColors.sickBackground,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 12.h),
-        Row(
-          children: [
-            Expanded(
-              child: BalanceCard(
-                title: 'Casual',
-                value: casualLeft,
-                subtitle: 'of $casualTotal days left',
-                icon: Icons.work_outline,
-                baseColor: AppColors.pending,
-                backgroundColor: AppColors.pendingBackground,
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: BalanceCard(
-                title: 'Unpaid',
-                value: unpaidStr,
-                subtitle: 'days taken',
-                icon: Icons.money_off,
-                baseColor: AppColors.unpaidLabel,
-                backgroundColor: Colors.transparent,
-              ),
-            ),
-          ],
-        ),
-      ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(child: Text('Error: $err')),
     );
   }
 
@@ -484,41 +492,21 @@ class DashboardPage extends ConsumerWidget {
   }
 
   Widget _buildListItemFromEntity(LeaveEntity entity) {
-    IconData icon;
-    Color iconColor;
-    Color iconBg;
-
-    switch (entity.leaveType) {
-      case 'Annual':
-        icon = Icons.wb_sunny_outlined;
-        iconColor = AppColors.annualLabel;
-        iconBg = AppColors.annualBackground;
-        break;
-      case 'Sick':
-        icon = Icons.monitor_heart_outlined;
-        iconColor = AppColors.sickLabel;
-        iconBg = AppColors.sickBackground;
-        break;
-      case 'Casual':
-        icon = Icons.work_outline;
-        iconColor = AppColors.pending;
-        iconBg = AppColors.pendingBackground;
-        break;
-      default:
-        icon = Icons.access_time;
-        iconColor = AppColors.textSecondary;
-        iconBg = AppColors.borderLight;
-    }
+    final theme = LeaveThemeUtil.getTheme(entity.leaveType);
 
     final dateFormat = DateFormat('MMM dd');
+    final String durationStr = entity.durationDays == entity.durationDays.truncateToDouble()
+        ? entity.durationDays.toInt().toString()
+        : entity.durationDays.toString();
+
     final dateStr = entity.durationDays == 1
         ? '${dateFormat.format(entity.startDate)} (1 Day)'
-        : '${dateFormat.format(entity.startDate)} - ${dateFormat.format(entity.endDate)} (${entity.durationDays} Days)';
+        : '${dateFormat.format(entity.startDate)} - ${dateFormat.format(entity.endDate)} ($durationStr Days)';
 
     return _buildListItem(
-      icon: icon,
-      iconColor: iconColor,
-      iconBg: iconBg,
+      icon: theme.icon,
+      iconColor: theme.baseColor,
+      iconBg: theme.backgroundColor,
       title: '${entity.leaveType} Leave',
       subtitle: dateStr,
       status: entity.status,

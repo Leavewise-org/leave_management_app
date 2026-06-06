@@ -9,6 +9,7 @@ import 'package:leave_management_app/features/auth/presentation/providers/auth_p
 import 'package:leave_management_app/features/leave/presentation/providers/leave_providers.dart';
 import 'package:leave_management_app/features/leave/domain/entities/leave_entity.dart';
 import 'package:leave_management_app/shared/widgets/app_refresh_indicator.dart';
+import 'package:leave_management_app/core/utils/leave_theme_util.dart';
 
 class LeaveHistoryPage extends ConsumerWidget {
   const LeaveHistoryPage({super.key});
@@ -89,8 +90,8 @@ class LeaveHistoryPage extends ConsumerWidget {
 
     return leavesAsync.when(
       data: (leaves) {
-        int used = 0;
-        int pending = 0;
+        double used = 0;
+        double pending = 0;
         for (final l in leaves) {
           if (l.status == 'approved') {
             used += l.durationDays;
@@ -98,13 +99,15 @@ class LeaveHistoryPage extends ConsumerWidget {
             pending += l.durationDays;
           }
         }
-        int left = 20 - used; // assuming 20 total for simplicity
+        
+        final String usedStr = used == used.truncateToDouble() ? used.toInt().toString().padLeft(2, '0') : used.toString();
+        final String pendingStr = pending == pending.truncateToDouble() ? pending.toInt().toString().padLeft(2, '0') : pending.toString();
 
         return Row(
           children: [
             Expanded(
               child: _buildStatBox(
-                val: used.toString().padLeft(2, '0'),
+                val: usedStr,
                 label: 'Used',
                 valColor: AppColors.textPrimary,
                 labelColor: AppColors.textSecondary,
@@ -115,18 +118,7 @@ class LeaveHistoryPage extends ConsumerWidget {
             SizedBox(width: 12.w),
             Expanded(
               child: _buildStatBox(
-                val: left.toString().padLeft(2, '0'),
-                label: 'Left',
-                valColor: AppColors.approvedText,
-                labelColor: AppColors.approvedText,
-                bgColor: AppColors.approvedBackground,
-                borderColor: AppColors.approvedBackground,
-              ),
-            ),
-            SizedBox(width: 12.w),
-            Expanded(
-              child: _buildStatBox(
-                val: pending.toString().padLeft(2, '0'),
+                val: pendingStr,
                 label: 'Pending',
                 valColor: AppColors.pendingText,
                 labelColor: AppColors.pendingText,
@@ -234,41 +226,21 @@ class LeaveHistoryPage extends ConsumerWidget {
   }
 
   Widget _buildListItemFromEntity(LeaveEntity entity) {
-    IconData icon;
-    Color iconColor;
-    Color iconBg;
-
-    switch (entity.leaveType) {
-      case 'Annual':
-        icon = Icons.wb_sunny_outlined;
-        iconColor = AppColors.annualLabel;
-        iconBg = AppColors.annualBackground;
-        break;
-      case 'Sick':
-        icon = Icons.monitor_heart_outlined;
-        iconColor = AppColors.sickLabel;
-        iconBg = AppColors.sickBackground;
-        break;
-      case 'Casual':
-        icon = Icons.work_outline;
-        iconColor = AppColors.pending;
-        iconBg = AppColors.pendingBackground;
-        break;
-      default:
-        icon = Icons.access_time;
-        iconColor = AppColors.textSecondary;
-        iconBg = AppColors.borderLight;
-    }
+    final theme = LeaveThemeUtil.getTheme(entity.leaveType);
 
     final dateFormat = DateFormat('MMM dd, yyyy');
+    final String durationStr = entity.durationDays == entity.durationDays.truncateToDouble()
+        ? entity.durationDays.toInt().toString()
+        : entity.durationDays.toString();
+
     final dateStr = entity.durationDays == 1
         ? '${dateFormat.format(entity.startDate)} (1 Day)'
-        : '${dateFormat.format(entity.startDate)} - ${dateFormat.format(entity.endDate)} (${entity.durationDays} Days)';
+        : '${dateFormat.format(entity.startDate)} - ${dateFormat.format(entity.endDate)} ($durationStr Days)';
 
     return _buildListItem(
-      icon: icon,
-      iconColor: iconColor,
-      iconBg: iconBg,
+      icon: theme.icon,
+      iconColor: theme.baseColor,
+      iconBg: theme.backgroundColor,
       title: '${entity.leaveType} Leave',
       subtitle: dateStr,
       status: entity.status,

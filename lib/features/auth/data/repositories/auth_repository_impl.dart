@@ -108,9 +108,9 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> createOrganization(String name, String address) async {
+  Future<void> createOrganization(String name, String address, Map<String, int> leavePolicies) async {
     try {
-      await _datasource.createOrganization(name, address);
+      await _datasource.createOrganization(name, address, leavePolicies);
     } catch (e) {
       throw UnknownAuthFailure(e.toString());
     }

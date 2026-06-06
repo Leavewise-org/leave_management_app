@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
 import 'package:leave_management_app/core/constants/app_colors.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:leave_management_app/features/school/presentation/providers/school_providers.dart';
 
-class LeavePolicyPage extends StatelessWidget {
+class LeavePolicyPage extends ConsumerWidget {
   const LeavePolicyPage({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final schoolAsync = ref.watch(currentSchoolProvider);
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
@@ -26,42 +30,39 @@ class LeavePolicyPage extends StatelessWidget {
           ),
         ),
       ),
-      body: ListView(
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-        children: [
-          _buildPolicyCard(
-            title: 'Annual Leave',
-            icon: Icons.wb_sunny_outlined,
-            iconColor: AppColors.primary,
-            bgColor: AppColors.primarySubtle,
-            description: 'Employees are entitled to 14 days of paid annual leave per calendar year. Annual leave must be requested at least 3 days in advance. Up to 5 days can be carried forward to the next year.',
-          ),
-          SizedBox(height: 16.h),
-          _buildPolicyCard(
-            title: 'Sick Leave',
-            icon: Icons.monitor_heart_outlined,
-            iconColor: AppColors.sickLabel,
-            bgColor: AppColors.sickBackground,
-            description: 'Employees are entitled to 7 days of paid sick leave. A valid medical certificate is required for sick leaves exceeding 2 consecutive days.',
-          ),
-          SizedBox(height: 16.h),
-          _buildPolicyCard(
-            title: 'Casual Leave',
-            icon: Icons.work_outline,
-            iconColor: AppColors.textSecondary,
-            bgColor: AppColors.quickGrayBackground,
-            description: 'Employees are provided 3 days of casual leave for personal or emergency matters. Casual leave cannot be combined with annual leave.',
-          ),
-          SizedBox(height: 16.h),
-          _buildPolicyCard(
-            title: 'Maternity/Paternity Leave',
-            icon: Icons.child_care,
-            iconColor: AppColors.pendingText,
-            bgColor: AppColors.pendingBackground,
-            description: 'Maternity leave: 84 days of paid leave.\nPaternity leave: 7 days of paid leave to be taken within 30 days of childbirth.',
-          ),
-          SizedBox(height: 32.h),
-        ],
+      body: schoolAsync.when(
+        data: (school) {
+          if (school == null) {
+            return const Center(child: Text('School not found.'));
+          }
+
+          final policies = school.leavePolicies;
+          if (policies.isEmpty) {
+            return const Center(child: Text('No leave policies found.'));
+          }
+
+          return ListView.separated(
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+            itemCount: policies.length,
+            separatorBuilder: (_, __) => SizedBox(height: 16.h),
+            itemBuilder: (context, index) {
+              final type = policies.keys.elementAt(index);
+              final quota = policies[type]!;
+              final desc = quota > 0 
+                  ? 'Employees are entitled to $quota days of $type.' 
+                  : 'Employees can apply for $type without a set quota. Usually unpaid or requires special approval.';
+              return _buildPolicyCard(
+                title: type,
+                icon: Icons.article_outlined,
+                iconColor: AppColors.primary,
+                bgColor: AppColors.primarySubtle,
+                description: desc,
+              );
+            },
+          );
+        },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (err, _) => Center(child: Text('Error: $err')),
       ),
     );
   }
