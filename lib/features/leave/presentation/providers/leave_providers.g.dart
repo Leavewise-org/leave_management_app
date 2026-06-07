@@ -327,8 +327,138 @@ class _PendingLeavesProviderElement
   String get schoolId => (origin as PendingLeavesProvider).schoolId;
 }
 
+String _$allLeavesHash() => r'2544d22131a1a4d49dc391755951afad189913c2';
+
+/// See also [allLeaves].
+@ProviderFor(allLeaves)
+const allLeavesProvider = AllLeavesFamily();
+
+/// See also [allLeaves].
+class AllLeavesFamily extends Family<AsyncValue<List<LeaveEntity>>> {
+  /// See also [allLeaves].
+  const AllLeavesFamily();
+
+  /// See also [allLeaves].
+  AllLeavesProvider call(
+    String schoolId,
+  ) {
+    return AllLeavesProvider(
+      schoolId,
+    );
+  }
+
+  @override
+  AllLeavesProvider getProviderOverride(
+    covariant AllLeavesProvider provider,
+  ) {
+    return call(
+      provider.schoolId,
+    );
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'allLeavesProvider';
+}
+
+/// See also [allLeaves].
+class AllLeavesProvider extends AutoDisposeStreamProvider<List<LeaveEntity>> {
+  /// See also [allLeaves].
+  AllLeavesProvider(
+    String schoolId,
+  ) : this._internal(
+          (ref) => allLeaves(
+            ref as AllLeavesRef,
+            schoolId,
+          ),
+          from: allLeavesProvider,
+          name: r'allLeavesProvider',
+          debugGetCreateSourceHash:
+              const bool.fromEnvironment('dart.vm.product')
+                  ? null
+                  : _$allLeavesHash,
+          dependencies: AllLeavesFamily._dependencies,
+          allTransitiveDependencies: AllLeavesFamily._allTransitiveDependencies,
+          schoolId: schoolId,
+        );
+
+  AllLeavesProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.schoolId,
+  }) : super.internal();
+
+  final String schoolId;
+
+  @override
+  Override overrideWith(
+    Stream<List<LeaveEntity>> Function(AllLeavesRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: AllLeavesProvider._internal(
+        (ref) => create(ref as AllLeavesRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        schoolId: schoolId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeStreamProviderElement<List<LeaveEntity>> createElement() {
+    return _AllLeavesProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AllLeavesProvider && other.schoolId == schoolId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, schoolId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin AllLeavesRef on AutoDisposeStreamProviderRef<List<LeaveEntity>> {
+  /// The parameter `schoolId` of this provider.
+  String get schoolId;
+}
+
+class _AllLeavesProviderElement
+    extends AutoDisposeStreamProviderElement<List<LeaveEntity>>
+    with AllLeavesRef {
+  _AllLeavesProviderElement(super.provider);
+
+  @override
+  String get schoolId => (origin as AllLeavesProvider).schoolId;
+}
+
 String _$submitLeaveNotifierHash() =>
-    r'2d0983d7970401f81bfe52a4cb350e0bae4ceb51';
+    r'164d5f93d40bde25bbad96e2299587374550361a';
 
 /// See also [SubmitLeaveNotifier].
 @ProviderFor(SubmitLeaveNotifier)
@@ -345,7 +475,7 @@ final submitLeaveNotifierProvider =
 
 typedef _$SubmitLeaveNotifier = AutoDisposeNotifier<SubmitLeaveState>;
 String _$manageLeaveNotifierHash() =>
-    r'da9d3096c3f0ce1e2b7dc71119427116dfb8bb8c';
+    r'47f368b1a84eb7e918a26837aa542f1c1f4aaffb';
 
 /// See also [ManageLeaveNotifier].
 @ProviderFor(ManageLeaveNotifier)

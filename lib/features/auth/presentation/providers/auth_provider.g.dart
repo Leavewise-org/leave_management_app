@@ -109,7 +109,7 @@ final signInNotifierProvider =
 );
 
 typedef _$SignInNotifier = AutoDisposeNotifier<SignInState>;
-String _$signUpNotifierHash() => r'829e7f31e273618dfacd864335b362d0ffc98503';
+String _$signUpNotifierHash() => r'868ce13ea53485ec8692edaaa91488394c0829af';
 
 /// See also [SignUpNotifier].
 @ProviderFor(SignUpNotifier)
