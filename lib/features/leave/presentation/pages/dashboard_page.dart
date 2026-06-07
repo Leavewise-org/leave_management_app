@@ -192,12 +192,16 @@ class DashboardPage extends ConsumerWidget {
         double unpaidTaken = 0;
 
         leavesAsync.whenData((leaves) {
+          final currentYear = DateTime.now().year;
           for (final leave in leaves) {
-            if (leave.status == 'approved' || leave.status == 'pending') {
-              if (policies.containsKey(leave.leaveType) && policies[leave.leaveType]! > 0) {
-                takenMap[leave.leaveType] = (takenMap[leave.leaveType] ?? 0) + leave.durationDays;
-              } else {
-                unpaidTaken += leave.durationDays;
+            // ONLY subtract leaves taken in the current year
+            if (leave.startDate.year == currentYear) {
+              if (leave.status == 'approved' || leave.status == 'pending') {
+                if (policies.containsKey(leave.leaveType) && policies[leave.leaveType]! > 0) {
+                  takenMap[leave.leaveType] = (takenMap[leave.leaveType] ?? 0) + leave.durationDays;
+                } else {
+                  unpaidTaken += leave.durationDays;
+                }
               }
             }
           }
