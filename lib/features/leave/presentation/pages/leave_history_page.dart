@@ -92,11 +92,14 @@ class LeaveHistoryPage extends ConsumerWidget {
       data: (leaves) {
         double used = 0;
         double pending = 0;
+        final currentYear = DateTime.now().year;
         for (final l in leaves) {
-          if (l.status == 'approved') {
-            used += l.durationDays;
-          } else if (l.status == 'pending') {
-            pending += l.durationDays;
+          if (l.startDate.year == currentYear) {
+            if (l.status == 'approved') {
+              used += l.durationDays;
+            } else if (l.status == 'pending') {
+              pending += l.durationDays;
+            }
           }
         }
         
