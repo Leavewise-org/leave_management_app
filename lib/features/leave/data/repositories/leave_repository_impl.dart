@@ -43,6 +43,11 @@ class LeaveRepositoryImpl implements LeaveRepository {
   }
 
   @override
+  Stream<List<LeaveEntity>> getLeavesBySchool(String schoolId) {
+    return _remoteDatasource.getLeavesBySchool(schoolId);
+  }
+
+  @override
   Future<void> updateLeaveStatus({
     required String leaveId,
     required String status,

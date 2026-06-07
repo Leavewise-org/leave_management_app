@@ -21,17 +21,16 @@ service cloud.firestore {
     
     // ── PROFILES ──────────────────────────────
     match /profiles/{userId} {
-      allow read: if isAuthenticated() && (
-        request.auth.uid == userId ||
-        getMyRole() == 'super_admin' ||
-        (isMySchool(resource.data.school_id) && getMyRole() in ['manager', 'school_admin'])
-      );
+      allow read: if isAuthenticated();
+      
       allow create: if isAuthenticated() && request.auth.uid == userId;
+      
       allow update: if isAuthenticated() && (
         request.auth.uid == userId ||
         (isMySchool(resource.data.school_id) && getMyRole() in ['manager', 'school_admin'])
       );
     }
+
 
     // ── LEAVE REQUESTS ────────────────────────
     match /leave_requests/{requestId} {

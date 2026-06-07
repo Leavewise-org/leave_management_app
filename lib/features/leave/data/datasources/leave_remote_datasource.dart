@@ -63,12 +63,26 @@ class LeaveRemoteDatasource {
     return _leavesCollection
         .where('schoolId', isEqualTo: schoolId)
         .where('status', isEqualTo: 'pending')
-        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs
+      final docs = snapshot.docs
           .map((doc) => LeaveModel.fromJson(doc.data(), doc.id))
           .toList();
+      docs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return docs;
+    });
+  }
+
+  Stream<List<LeaveModel>> getLeavesBySchool(String schoolId) {
+    return _leavesCollection
+        .where('schoolId', isEqualTo: schoolId)
+        .snapshots()
+        .map((snapshot) {
+      final docs = snapshot.docs
+          .map((doc) => LeaveModel.fromJson(doc.data(), doc.id))
+          .toList();
+      docs.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return docs;
     });
   }
 

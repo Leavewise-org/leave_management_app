@@ -16,7 +16,7 @@ final schoolRepositoryProvider = Provider<SchoolRepository>((ref) {
   return SchoolRepositoryImpl(datasource);
 });
 
-final schoolUsersProvider = StreamProvider.family<List<UserEntity>, String>((ref, schoolId) {
+final schoolUsersProvider = StreamProvider.autoDispose.family<List<UserEntity>, String>((ref, schoolId) {
   final repository = ref.watch(schoolRepositoryProvider);
   return repository.watchSchoolUsers(schoolId);
 });

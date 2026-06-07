@@ -35,6 +35,11 @@ Stream<List<LeaveEntity>> pendingLeaves(Ref ref, String schoolId) {
   return ref.watch(leaveRepositoryProvider).getPendingLeavesBySchool(schoolId);
 }
 
+@riverpod
+Stream<List<LeaveEntity>> allLeaves(Ref ref, String schoolId) {
+  return ref.watch(leaveRepositoryProvider).getLeavesBySchool(schoolId);
+}
+
 // ── Submit Leave Notifier ──────────────────────────────────────────
 
 class SubmitLeaveState {
