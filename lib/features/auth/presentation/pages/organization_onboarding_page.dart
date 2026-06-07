@@ -23,6 +23,68 @@ class _OrganizationOnboardingPageState
   bool _isLoading = false;
   String? _errorMsg;
 
+  final Map<String, int> _leavePolicies = {
+    'Annual Leave': 14,
+    'Sick Leave': 7,
+    'Casual Leave': 3,
+  };
+
+  void _addLeavePolicy(String name, int count) {
+    setState(() {
+      _leavePolicies[name] = count;
+    });
+  }
+
+  void _removeLeavePolicy(String name) {
+    setState(() {
+      _leavePolicies.remove(name);
+    });
+  }
+
+  void _showAddLeaveDialog() {
+    final nameCtrl = TextEditingController();
+    final countCtrl = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Add Leave Type'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Leave Name'),
+              ),
+              TextField(
+                controller: countCtrl,
+                decoration: const InputDecoration(labelText: 'Quota (Days, 0 = No Quota)'),
+                keyboardType: TextInputType.number,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final name = nameCtrl.text.trim();
+                final count = int.tryParse(countCtrl.text.trim()) ?? 0;
+                if (name.isNotEmpty) {
+                  _addLeavePolicy(name, count);
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   void dispose() {
     _joinIdCtrl.dispose();
@@ -61,6 +123,7 @@ class _OrganizationOnboardingPageState
       await ref.read(authRepositoryProvider).createOrganization(
             _createNameCtrl.text.trim(),
             _createAddressCtrl.text.trim(),
+            _leavePolicies,
           );
       // Router will automatically redirect to admin dashboard
     } catch (e) {
@@ -194,6 +257,31 @@ class _OrganizationOnboardingPageState
                       validator: (v) => v!.trim().isEmpty ? 'Required' : null,
                     ),
                     const SizedBox(height: 16),
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Leave Policies (Quotas)',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ..._leavePolicies.entries.map((e) {
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(e.key),
+                        subtitle: Text(e.value > 0 ? '${e.value} Days' : 'No Quota / Unpaid'),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, color: AppColors.rejectedText),
+                          onPressed: () => _removeLeavePolicy(e.key),
+                        ),
+                      );
+                    }),
+                    OutlinedButton.icon(
+                      onPressed: _showAddLeaveDialog,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Leave Type'),
+                    ),
+                    const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
                       height: 50,

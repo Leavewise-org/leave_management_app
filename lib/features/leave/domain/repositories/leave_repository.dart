@@ -10,6 +10,7 @@ abstract class LeaveRepository {
     required DateTime startDate,
     required DateTime endDate,
     required String reason,
+    required bool isHalfDay,
     String? attachmentUrl,
   });
 

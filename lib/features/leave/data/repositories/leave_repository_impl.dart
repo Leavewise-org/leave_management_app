@@ -16,6 +16,7 @@ class LeaveRepositoryImpl implements LeaveRepository {
     required DateTime startDate,
     required DateTime endDate,
     required String reason,
+    required bool isHalfDay,
     String? attachmentUrl,
   }) async {
     return await _remoteDatasource.submitLeave(
@@ -26,6 +27,7 @@ class LeaveRepositoryImpl implements LeaveRepository {
       startDate: startDate,
       endDate: endDate,
       reason: reason,
+      isHalfDay: isHalfDay,
       attachmentUrl: attachmentUrl,
     );
   }

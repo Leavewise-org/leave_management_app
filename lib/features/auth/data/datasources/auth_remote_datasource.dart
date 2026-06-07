@@ -142,7 +142,7 @@ class AuthRemoteDatasource {
     });
   }
 
-  Future<void> createOrganization(String name, String address) async {
+  Future<void> createOrganization(String name, String address, Map<String, int> leavePolicies) async {
     final authUser = _auth.currentUser;
     if (authUser == null) throw Exception('Not authenticated');
 
@@ -150,6 +150,7 @@ class AuthRemoteDatasource {
     await schoolRef.set({
       'name': name,
       'address': address,
+      'leave_policies': leavePolicies,
       'created_at': FieldValue.serverTimestamp(),
       'created_by': authUser.uid,
     });

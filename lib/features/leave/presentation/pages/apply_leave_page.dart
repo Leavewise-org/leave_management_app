@@ -7,6 +7,8 @@ import 'package:leave_management_app/features/auth/presentation/providers/auth_p
 import 'package:leave_management_app/features/leave/presentation/providers/leave_providers.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:leave_management_app/features/school/presentation/providers/school_providers.dart';
+import 'package:leave_management_app/core/utils/leave_theme_util.dart';
 
 class ApplyLeavePage extends ConsumerStatefulWidget {
   const ApplyLeavePage({super.key});
@@ -125,7 +127,7 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(height: 16.h),
-                        _buildLeaveTypeSection(),
+                        _buildLeaveTypeSection(ref),
                         SizedBox(height: 24.h),
                         _buildDateDurationSection(),
                         SizedBox(height: 24.h),
@@ -147,7 +149,9 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
     );
   }
 
-  Widget _buildLeaveTypeSection() {
+  Widget _buildLeaveTypeSection(WidgetRef ref) {
+    final schoolAsync = ref.watch(currentSchoolProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -160,15 +164,42 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
           ),
         ),
         SizedBox(height: 12.h),
-        Wrap(
-          spacing: 8.w,
-          runSpacing: 8.h,
-          children: [
-            _buildLeaveChip('Annual', Icons.wb_sunny_outlined, AppColors.annualLabel),
-            _buildLeaveChip('Sick', Icons.monitor_heart_outlined, AppColors.sickLabel),
-            _buildLeaveChip('Casual', Icons.work_outline, AppColors.pending),
-            _buildLeaveChip('Comp Off', Icons.access_time, AppColors.textSecondary),
-          ],
+        schoolAsync.when(
+          data: (school) {
+            if (school == null || school.leavePolicies.isEmpty) {
+              return Text(
+                'No leave policies configured.',
+                style: TextStyle(color: AppColors.textSecondary, fontSize: 13.sp),
+              );
+            }
+
+            final availableLeaves = school.leavePolicies.keys.toList();
+            if (!availableLeaves.any((type) => type.toLowerCase() == 'unpaid' || type.toLowerCase() == 'unpaid leave')) {
+              availableLeaves.add('Unpaid');
+            }
+
+            // Ensure _selectedLeaveType is valid
+            if (!availableLeaves.contains(_selectedLeaveType)) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _selectedLeaveType = availableLeaves.first;
+                  });
+                }
+              });
+            }
+
+            return Wrap(
+              spacing: 8.w,
+              runSpacing: 8.h,
+              children: availableLeaves.map((type) {
+                final theme = LeaveThemeUtil.getTheme(type);
+                return _buildLeaveChip(type, theme.icon, theme.baseColor);
+              }).toList(),
+            );
+          },
+          loading: () => const CircularProgressIndicator(),
+          error: (err, _) => Text('Error: $err', style: TextStyle(color: Colors.red)),
         ),
       ],
     );
@@ -284,7 +315,14 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
   Widget _buildDurationChip(String label, bool isFullDayValue) {
     final isSelected = _isFullDay == isFullDayValue;
     return GestureDetector(
-      onTap: () => setState(() => _isFullDay = isFullDayValue),
+      onTap: () {
+        setState(() {
+          _isFullDay = isFullDayValue;
+          if (!_isFullDay && _startDate != null) {
+            _endDate = _startDate; // Force single day for Half Day
+          }
+        });
+      },
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 12.h),
         alignment: Alignment.center,
@@ -431,6 +469,12 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
                   );
                   return;
                 }
+                if (!_isFullDay && !_startDate!.isAtSameMomentAs(_endDate!)) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Half Day leave can only be applied for a single date')),
+                  );
+                  return;
+                }
                 ref.read(submitLeaveNotifierProvider.notifier).submitLeave(
                       userId: user.id,
                       schoolId: user.schoolId,
@@ -439,6 +483,7 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
                       startDate: _startDate!,
                       endDate: _endDate!,
                       reason: _reasonController.text.trim(),
+                      isHalfDay: !_isFullDay,
                     );
               },
         style: ElevatedButton.styleFrom(

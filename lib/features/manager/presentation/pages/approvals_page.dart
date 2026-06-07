@@ -8,6 +8,7 @@ import 'package:leave_management_app/features/auth/presentation/providers/auth_p
 import 'package:leave_management_app/features/leave/domain/entities/leave_entity.dart';
 import 'package:leave_management_app/features/leave/presentation/providers/leave_providers.dart';
 import 'package:leave_management_app/shared/widgets/app_refresh_indicator.dart';
+import 'package:leave_management_app/core/utils/leave_theme_util.dart';
 
 class ApprovalsPage extends ConsumerWidget {
   const ApprovalsPage({super.key});
@@ -129,28 +130,13 @@ class ApprovalsPage extends ConsumerWidget {
   }
 
   Widget _buildApprovalCardFromEntity(WidgetRef ref, LeaveEntity entity) {
-    IconData icon;
-    Color leaveColor;
-    
-    switch (entity.leaveType) {
-      case 'Annual':
-        icon = Icons.wb_sunny_outlined;
-        leaveColor = AppColors.annualLabel;
-        break;
-      case 'Sick':
-        icon = Icons.monitor_heart_outlined;
-        leaveColor = AppColors.sickLabel;
-        break;
-      case 'Casual':
-        icon = Icons.work_outline;
-        leaveColor = AppColors.pending;
-        break;
-      default:
-        icon = Icons.access_time;
-        leaveColor = AppColors.textSecondary;
-    }
+    final theme = LeaveThemeUtil.getTheme(entity.leaveType);
 
     final dateFormat = DateFormat('MMM dd, yyyy');
+    final String durationStr = entity.durationDays == entity.durationDays.truncateToDouble()
+        ? entity.durationDays.toInt().toString()
+        : entity.durationDays.toString();
+
     final dateStr = entity.durationDays == 1
         ? dateFormat.format(entity.startDate)
         : '${dateFormat.format(entity.startDate)} \u2013 ${dateFormat.format(entity.endDate)}';
@@ -162,10 +148,10 @@ class ApprovalsPage extends ConsumerWidget {
       avatarColor: AppColors.primary,
       name: entity.userName,
       role: 'Employee',
-      duration: '${entity.durationDays} Day${entity.durationDays > 1 ? 's' : ''}',
+      duration: '$durationStr Day${entity.durationDays > 1 ? 's' : ''}',
       leaveType: '${entity.leaveType} Leave',
-      leaveIcon: icon,
-      leaveColor: leaveColor,
+      leaveIcon: theme.icon,
+      leaveColor: theme.baseColor,
       dateRange: dateStr,
       reason: entity.reason,
       attachment: entity.attachmentUrl,
