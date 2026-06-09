@@ -5,11 +5,32 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:leave_management_app/shared/placeholder/placeholder_page.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-// Auth
+
+// Auth & Dashboard
+import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
+import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/auth/presentation/pages/organization_onboarding_page.dart';
+import '../../features/leave/presentation/pages/dashboard_page.dart';
+import '../../features/leave/presentation/pages/apply_leave_page.dart';
+import '../../features/leave/presentation/pages/leave_history_page.dart';
+import '../../features/leave/presentation/pages/leave_calendar_page.dart';
+import '../../features/leave/presentation/pages/profile_page.dart';
+import '../../features/leave/presentation/pages/leave_policy_page.dart';
+import '../../features/manager/presentation/pages/approvals_page.dart';
+import '../../features/manager/presentation/pages/team_view_page.dart';
+import '../../features/manager/presentation/pages/reports_page.dart';
+import '../../features/school/presentation/pages/admin_dashboard_page.dart';
+import '../../features/school/presentation/pages/manage_employees_page.dart';
+import '../../features/school/presentation/pages/school_settings_page.dart';
+import '../../features/super_admin/presentation/pages/super_admin_dashboard_page.dart';
+import '../../features/super_admin/presentation/pages/manage_schools_page.dart';
+import '../../features/super_admin/presentation/pages/system_settings_page.dart';
+
+import 'main_shell_page.dart';
+import 'admin_shell_page.dart';
 
 part 'app_router.g.dart';
 
@@ -17,11 +38,13 @@ part 'app_router.g.dart';
 abstract class AppRoutes {
   static const String splash = '/';
   static const String login = '/login';
+  static const String register = '/register';
   static const String dashboard = '/home';
   static const String applyLeave = '/home/apply';
   static const String leaveHistory = '/home/history';
   static const String leaveCalendar = '/home/calendar';
   static const String profile = '/home/profile';
+  static const String leavePolicy = '/home/policy';
   // Manager
   static const String approvals = '/manager/approvals';
   static const String teamOverview = '/manager/team';
@@ -29,23 +52,27 @@ abstract class AppRoutes {
   // School
   static const String schoolOnboarding = '/school/onboarding';
   static const String schoolSettings = '/school/settings';
+  static const String adminDashboard = '/school/dashboard';
+  static const String manageEmployees = '/school/employees';
+  // Super Admin
+  static const String superAdminDashboard = '/system/dashboard';
+  static const String manageSchools = '/system/schools';
+  static const String systemSettings = '/system/settings';
 }
 
-// ── Auth listenable (no Riverpod chain involved) ───────────────────
-/// Wraps Supabase's onAuthStateChange as a [Listenable] for GoRouter.
-/// This avoids all Riverpod provider chain / rebuild issues.
-class _SupabaseAuthNotifier extends ChangeNotifier {
-  _SupabaseAuthNotifier() {
-    _sub = Supabase.instance.client.auth.onAuthStateChange.listen((_) {
-      notifyListeners();
-    });
+class GoRouterRefreshStream extends ChangeNotifier {
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen(
+      (dynamic _) => notifyListeners(),
+    );
   }
 
-  late final StreamSubscription<AuthState> _sub;
+  late final StreamSubscription<dynamic> _subscription;
 
   @override
   void dispose() {
-    _sub.cancel();
+    _subscription.cancel();
     super.dispose();
   }
 }
@@ -53,42 +80,62 @@ class _SupabaseAuthNotifier extends ChangeNotifier {
 // ── Router provider ────────────────────────────────────────────────
 @Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
-  final authNotifier = _SupabaseAuthNotifier();
+  final authStream = ref.watch(authStateProvider.stream);
+  final notifier = GoRouterRefreshStream(authStream);
 
   ref.onDispose(() {
-    authNotifier.dispose();
+    notifier.dispose();
   });
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: true,
-    refreshListenable: authNotifier,
+    refreshListenable: notifier,
 
     redirect: (context, state) {
-      // Check the live session directly — no Riverpod, no streams, no asyncMap
-      final session = Supabase.instance.client.auth.currentSession;
-      final isLoggedIn = session != null;
+      final userState = ref.read(authStateProvider);
+      
+      // If the stream is still loading its very first value, wait in splash
+      if (userState.isLoading && !userState.hasValue) {
+        return AppRoutes.splash;
+      }
+      
+      final user = userState.hasError ? null : userState.valueOrNull;
+      final isLoggedIn = user != null;
       final location = state.matchedLocation;
 
       final isSplash = location == AppRoutes.splash;
       final isLogin = location == AppRoutes.login;
+      final isRegister = location == AppRoutes.register;
+      final isOnboarding = location == AppRoutes.schoolOnboarding;
 
-      // 1. Splash → decide where to go
-      if (isSplash) {
-        return isLoggedIn ? AppRoutes.dashboard : AppRoutes.login;
-      }
-
-      // 2. Not logged in + trying to access a protected page → login
-      if (!isLoggedIn && !isLogin) {
+      // 1. Not logged in -> send to login (unless already there)
+      if (!isLoggedIn) {
+        if (isLogin || isRegister) return null;
         return AppRoutes.login;
       }
 
-      // 3. Logged in + on the login page → dashboard
-      if (isLoggedIn && isLogin) {
+      // 2. Logged in -> check onboarding / pending state
+      final schoolId = user.schoolId;
+      final role = user.role;
+
+      // Needs to pick a school
+      if (schoolId.isEmpty || schoolId == 'unknown') {
+        if (!isOnboarding) return AppRoutes.schoolOnboarding;
+        return null; // Stay on onboarding
+      }
+
+      // Waiting for approval is now handled natively in the dashboard, so no redirect here.
+
+      // Fully onboarded -> send away from splash/login/onboarding
+      if (isSplash || isLogin || isRegister || isOnboarding) {
+        // If owner/admin/manager -> Admin Dashboard
+        if (user.isSchoolAdmin || user.isSuperAdmin || user.isManager) {
+           return AppRoutes.adminDashboard;
+        }
         return AppRoutes.dashboard;
       }
 
-      // No redirect needed
       return null;
     },
 
@@ -107,58 +154,147 @@ GoRouter appRouter(Ref ref) {
         builder: (context, state) => const LoginPage(),
       ),
 
-      // Employee shell — Dashboard + nested tabs
+      // Register
       GoRoute(
-        path: AppRoutes.dashboard,
-        name: 'dashboard',
-        builder: (context, state) =>
-            const PlaceholderPage(label: 'Dashboard'),
-        routes: [
-          GoRoute(
-            path: 'apply',
-            name: 'applyLeave',
-            builder: (context, state) =>
-                const PlaceholderPage(label: 'Apply Leave'),
+        path: AppRoutes.register,
+        name: 'register',
+        builder: (context, state) => const RegisterPage(),
+      ),
+
+      // Employee shell — Dashboard + nested tabs
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return MainShellPage(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.dashboard,
+                name: 'dashboard',
+                builder: (context, state) => const DashboardPage(),
+              ),
+            ],
           ),
-          GoRoute(
-            path: 'history',
-            name: 'leaveHistory',
-            builder: (context, state) =>
-                const PlaceholderPage(label: 'Leave History'),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.leaveHistory,
+                name: 'leaveHistory',
+                builder: (context, state) => const LeaveHistoryPage(),
+              ),
+            ],
           ),
-          GoRoute(
-            path: 'calendar',
-            name: 'leaveCalendar',
-            builder: (context, state) =>
-                const PlaceholderPage(label: 'Calendar'),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.leaveCalendar,
+                name: 'leaveCalendar',
+                builder: (context, state) => const LeaveCalendarPage(),
+              ),
+            ],
           ),
-          GoRoute(
-            path: 'profile',
-            name: 'profile',
-            builder: (context, state) =>
-                const PlaceholderPage(label: 'Profile'),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.profile,
+                name: 'profile',
+                builder: (context, state) => const ProfilePage(),
+              ),
+            ],
           ),
         ],
+      ),
+
+      // Pages overlaying the bottom nav (Full screen)
+      GoRoute(
+        path: AppRoutes.applyLeave,
+        name: 'applyLeave',
+        builder: (context, state) => const ApplyLeavePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.leavePolicy,
+        name: 'leavePolicy',
+        builder: (context, state) => const LeavePolicyPage(),
       ),
 
       // Manager routes
       GoRoute(
         path: AppRoutes.approvals,
-        name: 'approvals',
-        builder: (context, state) =>
-            const PlaceholderPage(label: 'Pending Approvals'),
+        name: 'managerApprovals',
+        builder: (context, state) => const ApprovalsPage(),
       ),
       GoRoute(
         path: AppRoutes.teamOverview,
-        name: 'teamOverview',
-        builder: (context, state) =>
-            const PlaceholderPage(label: 'Team Overview'),
+        name: 'managerTeam',
+        builder: (context, state) => const TeamViewPage(),
       ),
       GoRoute(
         path: AppRoutes.reports,
-        name: 'reports',
-        builder: (context, state) =>
-            const PlaceholderPage(label: 'Reports'),
+        name: 'managerReports',
+        builder: (context, state) => const ReportsPage(),
+      ),
+
+      // School admin shell — Dashboard + nested tabs
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) {
+          return AdminShellPage(navigationShell: navigationShell);
+        },
+        branches: [
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.adminDashboard,
+                name: 'adminDashboard',
+                builder: (context, state) => const AdminDashboardPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.manageEmployees,
+                name: 'manageEmployees',
+                builder: (context, state) => const ManageEmployeesPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.schoolSettings,
+                name: 'schoolSettings',
+                builder: (context, state) => const SchoolSettingsPage(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: '/school/profile',
+                name: 'adminProfile',
+                builder: (context, state) => const ProfilePage(),
+              ),
+            ],
+          ),
+        ],
+      ),
+
+      // Super admin routes
+      GoRoute(
+        path: AppRoutes.superAdminDashboard,
+        name: 'superAdminDashboard',
+        builder: (context, state) => const SuperAdminDashboardPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.manageSchools,
+        name: 'manageSchools',
+        builder: (context, state) => const ManageSchoolsPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.systemSettings,
+        name: 'systemSettings',
+        builder: (context, state) => const SystemSettingsPage(),
       ),
 
       // School onboarding
@@ -166,7 +302,7 @@ GoRouter appRouter(Ref ref) {
         path: AppRoutes.schoolOnboarding,
         name: 'schoolOnboarding',
         builder: (context, state) =>
-            const PlaceholderPage(label: 'School Onboarding'),
+            const OrganizationOnboardingPage(),
       ),
     ],
 

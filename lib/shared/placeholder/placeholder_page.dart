@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_text_styles.dart';
 
@@ -40,7 +40,7 @@ class PlaceholderPage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 46),
               child: ElevatedButton.icon(
                 onPressed: () async {
-                  await Supabase.instance.client.auth.signOut();
+                  await FirebaseAuth.instance.signOut();
                 },
                 icon: const Icon(Icons.logout_rounded, size: 18),
                 label: const Text('Sign Out (test)'),

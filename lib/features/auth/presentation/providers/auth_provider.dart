@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../data/datasources/auth_remote_datasource.dart';
 import '../../data/repositories/auth_repository_impl.dart';
@@ -14,11 +15,14 @@ part 'auth_provider.g.dart';
 // ── Infrastructure providers ──────────────────────────────────────
 
 @riverpod
-SupabaseClient supabaseClient(Ref ref) => Supabase.instance.client;
+FirebaseAuth firebaseAuth(Ref ref) => FirebaseAuth.instance;
+
+@riverpod
+FirebaseFirestore firestore(Ref ref) => FirebaseFirestore.instance;
 
 @riverpod
 AuthRemoteDatasource authRemoteDatasource(Ref ref) =>
-    AuthRemoteDatasource(ref.watch(supabaseClientProvider));
+    AuthRemoteDatasource(ref.watch(firebaseAuthProvider), ref.watch(firestoreProvider));
 
 @riverpod
 AuthRepository authRepository(Ref ref) =>
@@ -93,6 +97,42 @@ class SignInNotifier extends _$SignInNotifier {
   Future<void> signOut() async {
     await ref.read(authRepositoryProvider).signOut();
     state = const SignInState();
+  }
+
+  void clearError() => state = state.copyWith(clearFailure: true);
+}
+
+// ── Sign-up notifier ─────────────────────────────────────────────
+
+@riverpod
+class SignUpNotifier extends _$SignUpNotifier {
+  @override
+  SignInState build() => const SignInState();
+
+  Future<void> signUp({
+    required String email,
+    required String password,
+    required String fullName,
+  }) async {
+    state = state.copyWith(isLoading: true, clearFailure: true);
+
+    try {
+      final user = await ref.read(authRepositoryProvider).signUp(
+            email: email,
+            password: password,
+            fullName: fullName,
+          );
+
+      state = state.copyWith(isLoading: false, user: user);
+    } on AuthFailure catch (f) {
+      state = state.copyWith(isLoading: false, failure: f);
+    } catch (e) {
+      debugPrint('❌ Unexpected sign-up error: $e');
+      state = state.copyWith(
+        isLoading: false,
+        failure: UnknownAuthFailure(e.toString()),
+      );
+    }
   }
 
   void clearError() => state = state.copyWith(clearFailure: true);

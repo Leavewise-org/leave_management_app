@@ -10,10 +10,24 @@ abstract interface class AuthRepository {
   /// Throws [AuthException] on failure.
   Future<UserEntity> signIn({required String email, required String password});
 
+  /// Registers a new user with [email], [password], [fullName].
+  /// Throws [AuthException] on failure.
+  Future<UserEntity> signUp({
+    required String email,
+    required String password,
+    required String fullName,
+  });
+
   /// Signs the user out and clears the local session.
   Future<void> signOut();
 
   /// Emits the current auth state whenever it changes.
   /// Emits `null` when signed out, [UserEntity] when signed in.
   Stream<UserEntity?> authStateChanges();
+
+  /// Joins an existing organization, setting the user role to 'pending'.
+  Future<void> joinOrganization(String schoolId);
+
+  /// Creates a new organization and sets the user role to 'owner'.
+  Future<void> createOrganization(String name, String address, Map<String, int> leavePolicies);
 }
