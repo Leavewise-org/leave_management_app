@@ -18,7 +18,13 @@ if (keystorePropertiesFile.exists()) {
 android {
     namespace = "com.leavewiseorg.leavewise"
     compileSdk = 36
-    ndkVersion = flutter.ndkVersion
+    ndkVersion = "28.0.12433566"
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false 
+        }
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
