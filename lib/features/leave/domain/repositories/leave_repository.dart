@@ -10,6 +10,7 @@ abstract class LeaveRepository {
     required DateTime startDate,
     required DateTime endDate,
     required String reason,
+    required bool isHalfDay,
     String? attachmentUrl,
   });
 
@@ -18,6 +19,9 @@ abstract class LeaveRepository {
 
   /// Returns a stream of pending leaves for a whole school (for managers).
   Stream<List<LeaveEntity>> getPendingLeavesBySchool(String schoolId);
+
+  /// Returns a stream of all leaves for a whole school.
+  Stream<List<LeaveEntity>> getLeavesBySchool(String schoolId);
 
   /// Updates the status of a leave request (e.g. approve/reject).
   Future<void> updateLeaveStatus({

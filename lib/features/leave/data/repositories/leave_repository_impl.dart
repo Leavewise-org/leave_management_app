@@ -16,6 +16,7 @@ class LeaveRepositoryImpl implements LeaveRepository {
     required DateTime startDate,
     required DateTime endDate,
     required String reason,
+    required bool isHalfDay,
     String? attachmentUrl,
   }) async {
     return await _remoteDatasource.submitLeave(
@@ -26,6 +27,7 @@ class LeaveRepositoryImpl implements LeaveRepository {
       startDate: startDate,
       endDate: endDate,
       reason: reason,
+      isHalfDay: isHalfDay,
       attachmentUrl: attachmentUrl,
     );
   }
@@ -38,6 +40,11 @@ class LeaveRepositoryImpl implements LeaveRepository {
   @override
   Stream<List<LeaveEntity>> getPendingLeavesBySchool(String schoolId) {
     return _remoteDatasource.getPendingLeavesBySchool(schoolId);
+  }
+
+  @override
+  Stream<List<LeaveEntity>> getLeavesBySchool(String schoolId) {
+    return _remoteDatasource.getLeavesBySchool(schoolId);
   }
 
   @override

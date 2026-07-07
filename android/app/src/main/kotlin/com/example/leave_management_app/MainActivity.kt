@@ -1,4 +1,4 @@
-package com.example.leave_management_app
+package com.leavewiseorg.leavewise
 
 import io.flutter.embedding.android.FlutterActivity
 

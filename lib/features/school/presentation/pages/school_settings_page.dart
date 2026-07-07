@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:leave_management_app/core/constants/app_colors.dart';
 import 'package:leave_management_app/core/constants/app_text_styles.dart';
+import 'package:leave_management_app/features/school/presentation/providers/school_providers.dart';
 
 class SchoolSettingsPage extends ConsumerWidget {
   const SchoolSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final schoolAsync = ref.watch(currentSchoolProvider);
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
@@ -29,78 +32,77 @@ class SchoolSettingsPage extends ConsumerWidget {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text('General Settings', style: AppTextStyles.formLabel),
-              const SizedBox(height: 16),
-              _SettingsField(
-                label: 'School Name',
-                initialValue: 'Ananda College',
-                icon: Icons.business_rounded,
-              ),
-              const SizedBox(height: 16),
-              _SettingsField(
-                label: 'Contact Email',
-                initialValue: 'admin@ananda.edu',
-                icon: Icons.email_outlined,
-              ),
-              const SizedBox(height: 32),
-              
-              const Text('Default Leave Quotas', style: AppTextStyles.formLabel),
-              const SizedBox(height: 16),
-              _SettingsField(
-                label: 'Annual Leave (Days)',
-                initialValue: '20',
-                icon: Icons.wb_sunny_outlined,
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
-              _SettingsField(
-                label: 'Sick Leave (Days)',
-                initialValue: '14',
-                icon: Icons.medical_services_outlined,
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 16),
-              _SettingsField(
-                label: 'Casual Leave (Days)',
-                initialValue: '7',
-                icon: Icons.event_available_outlined,
-                keyboardType: TextInputType.number,
-              ),
-
-              const SizedBox(height: 48),
-              SizedBox(
-                height: 52,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 0,
+        child: schoolAsync.when(
+          data: (school) {
+            if (school == null) return const Center(child: Text('School not found'));
+            
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text('General Settings', style: AppTextStyles.formLabel),
+                  const SizedBox(height: 16),
+                  _SettingsField(
+                    label: 'School Name',
+                    initialValue: school.name,
+                    icon: Icons.business_rounded,
                   ),
-                  onPressed: () {
-                    // Handle save
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Settings saved successfully')),
+                  const SizedBox(height: 16),
+                  _SettingsField(
+                    label: 'School Address',
+                    initialValue: school.address,
+                    icon: Icons.location_on_outlined,
+                  ),
+                  const SizedBox(height: 32),
+                  
+                  const Text('Default Leave Quotas', style: AppTextStyles.formLabel),
+                  const SizedBox(height: 16),
+                  ...school.leavePolicies.entries.map((e) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _SettingsField(
+                        label: '${e.key} (Days)',
+                        initialValue: e.value.toString(),
+                        icon: Icons.article_outlined,
+                        keyboardType: TextInputType.number,
+                      ),
                     );
-                  },
-                  child: const Text(
-                    'Save Settings',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                  }),
+
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    height: 52,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        elevation: 0,
+                      ),
+                      onPressed: () {
+                        // Handle save
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Settings saved successfully')),
+                        );
+                      },
+                      child: const Text(
+                        'Save Settings',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (err, _) => Center(child: Text('Error: $err')),
         ),
       ),
     );

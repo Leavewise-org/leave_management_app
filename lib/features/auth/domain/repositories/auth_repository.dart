@@ -29,5 +29,5 @@ abstract interface class AuthRepository {
   Future<void> joinOrganization(String schoolId);
 
   /// Creates a new organization and sets the user role to 'owner'.
-  Future<void> createOrganization(String name, String address);
+  Future<void> createOrganization(String name, String address, Map<String, int> leavePolicies);
 }
