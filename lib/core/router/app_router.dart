@@ -12,7 +12,9 @@ import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
-import '../../features/auth/presentation/pages/organization_onboarding_page.dart';
+import '../../features/auth/presentation/pages/school_selection_page.dart';
+import '../../features/auth/presentation/pages/join_school_page.dart';
+import '../../features/auth/presentation/pages/register_school_page.dart';
 import '../../features/leave/presentation/pages/dashboard_page.dart';
 import '../../features/leave/presentation/pages/apply_leave_page.dart';
 import '../../features/leave/presentation/pages/leave_history_page.dart';
@@ -51,6 +53,8 @@ abstract class AppRoutes {
   static const String reports = '/manager/reports';
   // School
   static const String schoolOnboarding = '/school/onboarding';
+  static const String joinSchool = '/school/join';
+  static const String registerSchool = '/school/register';
   static const String schoolSettings = '/school/settings';
   static const String adminDashboard = '/school/dashboard';
   static const String manageEmployees = '/school/employees';
@@ -107,7 +111,9 @@ GoRouter appRouter(Ref ref) {
       final isSplash = location == AppRoutes.splash;
       final isLogin = location == AppRoutes.login;
       final isRegister = location == AppRoutes.register;
-      final isOnboarding = location == AppRoutes.schoolOnboarding;
+      final isOnboarding = location == AppRoutes.schoolOnboarding ||
+                           location == AppRoutes.joinSchool ||
+                           location == AppRoutes.registerSchool;
 
       // 1. Not logged in -> send to login (unless already there)
       if (!isLoggedIn) {
@@ -301,8 +307,17 @@ GoRouter appRouter(Ref ref) {
       GoRoute(
         path: AppRoutes.schoolOnboarding,
         name: 'schoolOnboarding',
-        builder: (context, state) =>
-            const OrganizationOnboardingPage(),
+        builder: (context, state) => const SchoolSelectionPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.joinSchool,
+        name: 'joinSchool',
+        builder: (context, state) => const JoinSchoolPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.registerSchool,
+        name: 'registerSchool',
+        builder: (context, state) => const RegisterSchoolPage(),
       ),
     ],
 
