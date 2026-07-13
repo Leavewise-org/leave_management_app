@@ -12,6 +12,8 @@ import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/pages/splash_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
 import '../../features/auth/presentation/pages/register_page.dart';
+import '../../features/auth/presentation/pages/forgot_password_page.dart';
+import '../../features/auth/presentation/pages/reset_password_page.dart';
 import '../../features/auth/presentation/pages/school_selection_page.dart';
 import '../../features/auth/presentation/pages/join_school_page.dart';
 import '../../features/auth/presentation/pages/register_school_page.dart';
@@ -41,6 +43,8 @@ abstract class AppRoutes {
   static const String splash = '/';
   static const String login = '/login';
   static const String register = '/register';
+  static const String forgotPassword = '/forgot-password';
+  static const String resetPassword = '/reset-password';
   static const String dashboard = '/home';
   static const String applyLeave = '/home/apply';
   static const String leaveHistory = '/home/history';
@@ -111,13 +115,15 @@ GoRouter appRouter(Ref ref) {
       final isSplash = location == AppRoutes.splash;
       final isLogin = location == AppRoutes.login;
       final isRegister = location == AppRoutes.register;
+      final isForgot = location == AppRoutes.forgotPassword;
+      final isReset = location == AppRoutes.resetPassword;
       final isOnboarding = location == AppRoutes.schoolOnboarding ||
                            location == AppRoutes.joinSchool ||
                            location == AppRoutes.registerSchool;
 
-      // 1. Not logged in -> send to login (unless already there)
+      // 1. Not logged in -> send to login (unless already there or on forgot/reset)
       if (!isLoggedIn) {
-        if (isLogin || isRegister) return null;
+        if (isLogin || isRegister || isForgot || isReset) return null;
         return AppRoutes.login;
       }
 
@@ -134,7 +140,7 @@ GoRouter appRouter(Ref ref) {
       // Waiting for approval is now handled natively in the dashboard, so no redirect here.
 
       // Fully onboarded -> send away from splash/login/onboarding
-      if (isSplash || isLogin || isRegister || isOnboarding) {
+      if (isSplash || isLogin || isRegister || isForgot || isReset || isOnboarding) {
         // If owner/admin/manager -> Admin Dashboard
         if (user.isSchoolAdmin || user.isSuperAdmin || user.isManager) {
            return AppRoutes.adminDashboard;
@@ -165,6 +171,23 @@ GoRouter appRouter(Ref ref) {
         path: AppRoutes.register,
         name: 'register',
         builder: (context, state) => const RegisterPage(),
+      ),
+
+      // Forgot Password
+      GoRoute(
+        path: AppRoutes.forgotPassword,
+        name: 'forgotPassword',
+        builder: (context, state) => const ForgotPasswordPage(),
+      ),
+
+      // Reset Password
+      GoRoute(
+        path: AppRoutes.resetPassword,
+        name: 'resetPassword',
+        builder: (context, state) {
+          final oobCode = state.uri.queryParameters['oobCode'] ?? '';
+          return ResetPasswordPage(oobCode: oobCode);
+        },
       ),
 
       // Employee shell — Dashboard + nested tabs
