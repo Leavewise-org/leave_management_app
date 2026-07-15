@@ -75,6 +75,10 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).value;
+    
+    if (user != null) {
+      ref.watch(userLeavesProvider(user.id));
+    }
 
     ref.listen(submitLeaveNotifierProvider, (prev, next) {
       if (next.isSuccess) {
@@ -475,6 +479,53 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
                   );
                   return;
                 }
+
+                // Check remaining balance
+                final isUnpaid = _selectedLeaveType.toLowerCase() == 'unpaid' || _selectedLeaveType.toLowerCase() == 'unpaid leave';
+                if (!isUnpaid) {
+                  final schoolAsync = ref.read(currentSchoolProvider);
+                  final userLeavesAsync = ref.read(userLeavesProvider(user.id));
+                  
+                  if (schoolAsync.isLoading || userLeavesAsync.isLoading) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Loading balance data, please try again in a moment.')),
+                    );
+                    return;
+                  }
+                  
+                  final school = schoolAsync.value;
+                  final userLeaves = userLeavesAsync.value ?? [];
+                  
+                  if (school != null) {
+                    final quota = school.leavePolicies[_selectedLeaveType]?.toDouble() ?? 0.0;
+                    double takenDays = 0.0;
+                    for (final l in userLeaves) {
+                      if (l.leaveType == _selectedLeaveType && l.status != 'rejected') {
+                        takenDays += l.durationDays;
+                      }
+                    }
+                    final remainingBalance = quota - takenDays;
+                    
+                    final requestedDays = _isFullDay 
+                        ? _endDate!.difference(_startDate!).inDays + 1.0
+                        : 0.5;
+
+                    if (requestedDays > remainingBalance) {
+                      final remainingStr = remainingBalance == remainingBalance.truncateToDouble()
+                          ? remainingBalance.toInt().toString()
+                          : remainingBalance.toString();
+                          
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Insufficient balance. You have $remainingStr days left for ${_selectedLeaveType} Leave.'),
+                          backgroundColor: AppColors.rejected,
+                        ),
+                      );
+                      return;
+                    }
+                  }
+                }
+
                 ref.read(submitLeaveNotifierProvider.notifier).submitLeave(
                       userId: user.id,
                       schoolId: user.schoolId,
