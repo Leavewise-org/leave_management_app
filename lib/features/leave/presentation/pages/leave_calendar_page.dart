@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:leave_management_app/core/constants/app_colors.dart';
 import 'package:table_calendar/table_calendar.dart';
+import '../providers/calendar_events_provider.dart';
+import '../../domain/entities/leave_entity.dart';
+import '../../../holidays/domain/entities/holiday_entity.dart';
 
-class LeaveCalendarPage extends StatefulWidget {
+class LeaveCalendarPage extends ConsumerStatefulWidget {
   const LeaveCalendarPage({super.key});
 
   @override
-  State<LeaveCalendarPage> createState() => _LeaveCalendarPageState();
+  ConsumerState<LeaveCalendarPage> createState() => _LeaveCalendarPageState();
 }
 
-class _LeaveCalendarPageState extends State<LeaveCalendarPage> {
+class _LeaveCalendarPageState extends ConsumerState<LeaveCalendarPage> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
 
@@ -74,6 +79,8 @@ class _LeaveCalendarPageState extends State<LeaveCalendarPage> {
   }
 
   Widget _buildCalendarCard() {
+    final eventsMap = ref.watch(calendarEventsProvider);
+    
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -100,12 +107,43 @@ class _LeaveCalendarPageState extends State<LeaveCalendarPage> {
                 _focusedDay = focusedDay;
               });
             },
+            eventLoader: (day) {
+              final date = DateTime(day.year, day.month, day.day);
+              return eventsMap[date] ?? [];
+            },
             headerStyle: HeaderStyle(
               formatButtonVisible: false,
               titleCentered: false,
               leftChevronIcon: Icon(Icons.chevron_left, color: AppColors.textPrimary, size: 24.sp),
               rightChevronIcon: Icon(Icons.chevron_right, color: AppColors.textPrimary, size: 24.sp),
               titleTextStyle: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+            ),
+            calendarBuilders: CalendarBuilders(
+              markerBuilder: (context, date, events) {
+                if (events.isEmpty) return const SizedBox();
+                return Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: events.take(4).map((event) {
+                    Color color = AppColors.primary;
+                    if (event is LeaveEntity) {
+                      if (event.status == 'pending') color = AppColors.pending;
+                      if (event.status == 'rejected') color = AppColors.rejected;
+                    } else if (event is HolidayEntity) {
+                      color = Colors.blue; // Public Holiday / Poya indicator
+                    }
+
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 1.5, vertical: 6.0),
+                      width: 6.w,
+                      height: 6.w,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: color,
+                      ),
+                    );
+                  }).toList(),
+                );
+              },
             ),
             calendarStyle: CalendarStyle(
               todayDecoration: const BoxDecoration(
@@ -128,12 +166,15 @@ class _LeaveCalendarPageState extends State<LeaveCalendarPage> {
           Divider(height: 1, color: AppColors.borderLight),
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+            child: Wrap(
+              spacing: 12.w,
+              runSpacing: 8.h,
+              alignment: WrapAlignment.center,
               children: [
-                _buildLegendItem(label: 'Today', color: AppColors.primary, isOutline: false),
-                _buildLegendItem(label: 'My Leave', color: AppColors.primary, isOutline: true),
-                _buildLegendItem(label: 'Holiday', color: AppColors.pending, isOutline: false),
+                _buildLegendItem(label: 'Approved', color: AppColors.primary, isOutline: false),
+                _buildLegendItem(label: 'Pending', color: AppColors.pending, isOutline: false),
+                _buildLegendItem(label: 'Rejected', color: AppColors.rejected, isOutline: false),
+                _buildLegendItem(label: 'Holiday / Poya', color: Colors.blue, isOutline: false),
               ],
             ),
           ),
@@ -144,6 +185,7 @@ class _LeaveCalendarPageState extends State<LeaveCalendarPage> {
 
   Widget _buildLegendItem({required String label, required Color color, required bool isOutline}) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Container(
           width: 8.w,
@@ -164,6 +206,8 @@ class _LeaveCalendarPageState extends State<LeaveCalendarPage> {
   }
 
   Widget _buildUpcomingSection() {
+    final upcoming = ref.watch(upcomingEventsProvider);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -177,6 +221,7 @@ class _LeaveCalendarPageState extends State<LeaveCalendarPage> {
         ),
         SizedBox(height: 16.h),
         Container(
+          width: double.infinity,
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(20.r),
@@ -189,33 +234,68 @@ class _LeaveCalendarPageState extends State<LeaveCalendarPage> {
               ),
             ],
           ),
-          child: Column(
-            children: [
-              _buildListItem(
-                icon: Icons.celebration,
-                iconColor: AppColors.pendingText,
-                iconBg: AppColors.pendingBackground,
-                title: 'Vesak Holiday',
-                subtitle: 'May 2 • Public Holiday',
-              ),
-              Divider(height: 1, color: AppColors.borderLight),
-              _buildListItem(
-                icon: Icons.work_outline,
-                iconColor: AppColors.textSecondary,
-                iconBg: AppColors.quickGrayBackground,
-                title: 'Casual Leave',
-                subtitle: 'May 20 • Pending',
-              ),
-              Divider(height: 1, color: AppColors.borderLight),
-              _buildListItem(
-                icon: Icons.flag_outlined,
-                iconColor: AppColors.pendingText,
-                iconBg: AppColors.pendingBackground,
-                title: 'National Day',
-                subtitle: 'May 27 • Public Holiday',
-              ),
-            ],
-          ),
+          child: upcoming.isEmpty 
+              ? Padding(
+                  padding: EdgeInsets.all(32.w),
+                  child: Center(
+                    child: Text(
+                      'No upcoming events',
+                      style: TextStyle(color: AppColors.textSecondary),
+                    ),
+                  ),
+                )
+              : Column(
+                  children: upcoming.map((event) {
+                    IconData icon = Icons.event;
+                    Color iconColor = AppColors.primary;
+                    Color iconBg = AppColors.primarySubtle;
+                    String title = '';
+                    String subtitle = '';
+                    String displayDate = '';
+                    String statusStr = '';
+                    
+                    if (event is LeaveEntity) {
+                      icon = Icons.work_outline;
+                      if (event.status == 'pending') {
+                        iconColor = AppColors.pendingText;
+                        iconBg = AppColors.pendingBackground;
+                      } else if (event.status == 'rejected') {
+                        iconColor = AppColors.rejected;
+                        iconBg = AppColors.rejected.withOpacity(0.1);
+                      }
+                      title = event.leaveType;
+                      statusStr = event.status[0].toUpperCase() + event.status.substring(1);
+                      
+                      final dateStr = DateFormat('MMM d').format(event.startDate);
+                      final endStr = DateFormat('MMM d').format(event.endDate);
+                      displayDate = event.startDate == event.endDate ? dateStr : '$dateStr - $endStr';
+                      subtitle = '$displayDate • $statusStr';
+                    } else if (event is HolidayEntity) {
+                      final dynamic e = event;
+                      icon = e.type.toLowerCase().contains('poya') ? Icons.nightlight_round : Icons.flag;
+                      iconColor = Colors.blue;
+                      iconBg = Colors.blue.withOpacity(0.1);
+                      title = e.name;
+                      statusStr = e.type;
+                      displayDate = DateFormat('MMM d').format(e.date);
+                      subtitle = '$displayDate • $statusStr';
+                    }
+
+                    return Column(
+                      children: [
+                        _buildListItem(
+                          icon: icon,
+                          iconColor: iconColor,
+                          iconBg: iconBg,
+                          title: title,
+                          subtitle: subtitle,
+                        ),
+                        if (event != upcoming.last)
+                          Divider(height: 1, color: AppColors.borderLight),
+                      ],
+                    );
+                  }).toList(),
+                ),
         ),
       ],
     );

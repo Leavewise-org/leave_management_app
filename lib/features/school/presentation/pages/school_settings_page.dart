@@ -55,6 +55,28 @@ class SchoolSettingsPage extends ConsumerWidget {
                     icon: Icons.location_on_outlined,
                   ),
                   const SizedBox(height: 32),
+
+                  const Text('Holiday Settings', style: AppTextStyles.formLabel),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySubtle,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.event_available, color: AppColors.primary),
+                    ),
+                    title: const Text('Manage Public Holidays', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Add, edit or remove yearly holidays', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
+                    onTap: () {
+                      context.push('/school/holidays');
+                    },
+                  ),
+
+                  const SizedBox(height: 32),
                   
                   const Text('Default Leave Quotas', style: AppTextStyles.formLabel),
                   const SizedBox(height: 16),

@@ -19,6 +19,7 @@ class LeaveRemoteDatasource {
     required DateTime endDate,
     required String reason,
     required bool isHalfDay,
+    required double durationDays,
     String? attachmentUrl,
   }) async {
     try {
@@ -37,6 +38,7 @@ class LeaveRemoteDatasource {
         status: 'pending',
         attachmentUrl: attachmentUrl,
         isHalfDay: isHalfDay,
+        durationDays: durationDays,
         createdAt: now,
       );
 

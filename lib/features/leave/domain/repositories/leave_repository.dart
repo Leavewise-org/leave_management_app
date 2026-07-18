@@ -11,6 +11,7 @@ abstract class LeaveRepository {
     required DateTime endDate,
     required String reason,
     required bool isHalfDay,
+    required double durationDays,
     String? attachmentUrl,
   });
 

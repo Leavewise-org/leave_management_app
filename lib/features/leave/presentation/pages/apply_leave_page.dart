@@ -9,6 +9,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:leave_management_app/features/school/presentation/providers/school_providers.dart';
 import 'package:leave_management_app/core/utils/leave_theme_util.dart';
+import 'package:leave_management_app/features/holidays/presentation/providers/holiday_providers.dart';
+import 'package:leave_management_app/features/leave/domain/services/leave_calculation_service.dart';
 
 class ApplyLeavePage extends ConsumerStatefulWidget {
   const ApplyLeavePage({super.key});
@@ -133,13 +135,13 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
                         SizedBox(height: 16.h),
                         _buildLeaveTypeSection(ref),
                         SizedBox(height: 24.h),
-                        _buildDateDurationSection(),
+                        _buildDateDurationSection(ref),
                         SizedBox(height: 24.h),
                         _buildReasonSection(),
                         SizedBox(height: 24.h),
                         _buildAttachmentSection(),
                         const Spacer(),
-                        _buildSubmitButton(user),
+                        _buildSubmitButton(user, ref),
                         SizedBox(height: 32.h),
                       ],
                     ),
@@ -241,20 +243,49 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
     );
   }
 
-  Widget _buildDateDurationSection() {
+  Widget _buildDateDurationSection(WidgetRef ref) {
     final startText = _startDate != null ? DateFormat('MMM dd, yyyy').format(_startDate!) : 'Start Date';
     final endText = _endDate != null ? DateFormat('MMM dd, yyyy').format(_endDate!) : 'End Date';
+
+    // Calculate requested days
+    final holidaysAsync = ref.watch(holidaysByYearProvider(_startDate?.year ?? DateTime.now().year));
+    final holidays = holidaysAsync.value ?? [];
+    double calculatedWorkingDays = 0.0;
+    if (_startDate != null && _endDate != null) {
+      calculatedWorkingDays = LeaveCalculationService.calculateWorkingDays(_startDate!, _endDate!, !_isFullDay, holidays);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Date & Duration',
-          style: TextStyle(
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Date & Duration',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            if (_startDate != null && _endDate != null)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: AppColors.primarySubtle,
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Text(
+                  '$calculatedWorkingDays Working Days',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+          ],
         ),
         SizedBox(height: 12.h),
         GestureDetector(
@@ -452,7 +483,7 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
     );
   }
 
-  Widget _buildSubmitButton(dynamic user) {
+  Widget _buildSubmitButton(dynamic user, WidgetRef ref) {
     final isLoading = ref.watch(submitLeaveNotifierProvider).isLoading;
 
     return SizedBox(
@@ -482,6 +513,19 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
 
                 // Check remaining balance
                 final isUnpaid = _selectedLeaveType.toLowerCase() == 'unpaid' || _selectedLeaveType.toLowerCase() == 'unpaid leave';
+                
+                // Calculate Exact Working Days
+                final holidaysAsync = ref.read(holidaysByYearProvider(_startDate!.year));
+                final holidays = holidaysAsync.value ?? [];
+                final requestedDays = LeaveCalculationService.calculateWorkingDays(_startDate!, _endDate!, !_isFullDay, holidays);
+
+                if (requestedDays <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Your selected dates contain 0 working days (weekends/holidays).')),
+                  );
+                  return;
+                }
+
                 if (!isUnpaid) {
                   final schoolAsync = ref.read(currentSchoolProvider);
                   final userLeavesAsync = ref.read(userLeavesProvider(user.id));
@@ -505,10 +549,6 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
                       }
                     }
                     final remainingBalance = quota - takenDays;
-                    
-                    final requestedDays = _isFullDay 
-                        ? _endDate!.difference(_startDate!).inDays + 1.0
-                        : 0.5;
 
                     if (requestedDays > remainingBalance) {
                       final remainingStr = remainingBalance == remainingBalance.truncateToDouble()
@@ -535,6 +575,7 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
                       endDate: _endDate!,
                       reason: _reasonController.text.trim(),
                       isHalfDay: !_isFullDay,
+                      durationDays: requestedDays,
                     );
               },
         style: ElevatedButton.styleFrom(
