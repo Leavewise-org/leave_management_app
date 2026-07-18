@@ -27,17 +27,31 @@ Map<DateTime, List<dynamic>> calendarEvents(Ref ref) {
   
   final Map<DateTime, List<dynamic>> map = {};
   
-  // Add leaves
+  // Prepare holiday dates for quick lookup
+  final Set<DateTime> holidayDates = {};
+  if (holidaysAsync.valueOrNull != null) {
+    for (final h in holidaysAsync.value!) {
+      holidayDates.add(DateTime(h.date.year, h.date.month, h.date.day));
+    }
+  }
+  
+  // Add leaves (skip weekends and holidays)
   if (leavesAsync.valueOrNull != null) {
     for (final leave in leavesAsync.value!) {
       DateTime current = DateTime(leave.startDate.year, leave.startDate.month, leave.startDate.day);
       final end = DateTime(leave.endDate.year, leave.endDate.month, leave.endDate.day);
       
       while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
-        if (map[current] == null) {
-          map[current] = [];
+        final isWeekend = current.weekday == DateTime.saturday || current.weekday == DateTime.sunday;
+        final isHoliday = holidayDates.contains(current);
+
+        // Only show leave event on actual working days
+        if (!isWeekend && !isHoliday) {
+          if (map[current] == null) {
+            map[current] = [];
+          }
+          map[current]!.add(leave);
         }
-        map[current]!.add(leave);
         current = current.add(const Duration(days: 1));
       }
     }

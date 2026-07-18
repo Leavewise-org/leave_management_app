@@ -31,10 +31,7 @@ class _LeaveCalendarPageState extends ConsumerState<LeaveCalendarPage> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        if(Navigator.of(context).canPop()){
-          Navigator.of(context).pop();
-        }else{
+        if (!didPop) {
           context.go('/home');
         }
       },
@@ -45,7 +42,7 @@ class _LeaveCalendarPageState extends ConsumerState<LeaveCalendarPage> {
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
-            onPressed: () => context.pop(),
+            onPressed: () => context.go('/home'),
           ),
           title: Text(
             'Calendar',

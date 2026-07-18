@@ -366,7 +366,7 @@ class DashboardPage extends ConsumerWidget {
               label: 'Apply\nLeave',
               color: AppColors.primary,
               backgroundColor: AppColors.quickBlueBackground,
-              onTap: () => context.go(AppRoutes.applyLeave),
+              onTap: () => context.push(AppRoutes.applyLeave),
             ),
             QuickActionBtn(
               icon: Icons.calendar_today_outlined,
@@ -387,7 +387,7 @@ class DashboardPage extends ConsumerWidget {
               label: 'Leave\nPolicies',
               color: AppColors.textSecondary,
               backgroundColor: Colors.transparent,
-              onTap: () {},
+              onTap: () => context.push(AppRoutes.leavePolicy),
             ),
           ],
         ),
@@ -503,9 +503,13 @@ class DashboardPage extends ConsumerWidget {
         ? entity.durationDays.toInt().toString()
         : entity.durationDays.toString();
 
-    final dateStr = entity.durationDays == 1
+    final isSameDay = entity.startDate.year == entity.endDate.year && 
+                      entity.startDate.month == entity.endDate.month && 
+                      entity.startDate.day == entity.endDate.day;
+
+    final dateStr = isSameDay
         ? '${dateFormat.format(entity.startDate)} (1 Day)'
-        : '${dateFormat.format(entity.startDate)} - ${dateFormat.format(entity.endDate)} ($durationStr Days)';
+        : '${dateFormat.format(entity.startDate)} \u2013 ${dateFormat.format(entity.endDate)} ($durationStr Days)';
 
     return _buildListItem(
       icon: theme.icon,

@@ -31,7 +31,7 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
   Future<void> _selectDateRange(BuildContext context) async {
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
-      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      firstDate: DateTime.now(), // Prevents past date selection
       lastDate: DateTime.now().add(const Duration(days: 365)),
       initialDateRange: _startDate != null && _endDate != null
           ? DateTimeRange(start: _startDate!, end: _endDate!)
@@ -94,12 +94,9 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
     });
 
     return PopScope(
-      canPop: false,
+      canPop: context.canPop(),
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        if(Navigator.of(context).canPop()){
-          Navigator.of(context).pop();
-        }else{
+        if (!didPop) {
           context.go('/home');
         }
       },
@@ -110,7 +107,13 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
-            onPressed: () => context.pop(),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            },
           ),
           title: Text(
             'New Request',
@@ -514,6 +517,38 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
                 // Check remaining balance
                 final isUnpaid = _selectedLeaveType.toLowerCase() == 'unpaid' || _selectedLeaveType.toLowerCase() == 'unpaid leave';
                 
+                // Get all user leaves to check for balance AND overlaps
+                final userLeavesAsync = ref.read(userLeavesProvider(user.id));
+                final userLeaves = userLeavesAsync.value ?? [];
+
+                // OVERLAP CHECK: Prevent double-applying for the same dates
+                bool hasOverlap = false;
+                for (final l in userLeaves) {
+                  if (l.status != 'rejected') {
+                    // Strip time for accurate date-only comparison
+                    final newStart = DateTime(_startDate!.year, _startDate!.month, _startDate!.day);
+                    final newEnd = DateTime(_endDate!.year, _endDate!.month, _endDate!.day);
+                    final oldStart = DateTime(l.startDate.year, l.startDate.month, l.startDate.day);
+                    final oldEnd = DateTime(l.endDate.year, l.endDate.month, l.endDate.day);
+
+                    // Overlap formula: (Start A <= End B) and (End A >= Start B)
+                    if (newStart.compareTo(oldEnd) <= 0 && newEnd.compareTo(oldStart) >= 0) {
+                      hasOverlap = true;
+                      break;
+                    }
+                  }
+                }
+
+                if (hasOverlap) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('You have already applied for leave during these dates.'),
+                      backgroundColor: AppColors.rejected,
+                    ),
+                  );
+                  return;
+                }
+                
                 // Calculate Exact Working Days
                 final holidaysAsync = ref.read(holidaysByYearProvider(_startDate!.year));
                 final holidays = holidaysAsync.value ?? [];
@@ -528,7 +563,6 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
 
                 if (!isUnpaid) {
                   final schoolAsync = ref.read(currentSchoolProvider);
-                  final userLeavesAsync = ref.read(userLeavesProvider(user.id));
                   
                   if (schoolAsync.isLoading || userLeavesAsync.isLoading) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -538,7 +572,6 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
                   }
                   
                   final school = schoolAsync.value;
-                  final userLeaves = userLeavesAsync.value ?? [];
                   
                   if (school != null) {
                     final quota = school.leavePolicies[_selectedLeaveType]?.toDouble() ?? 0.0;

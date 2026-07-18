@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:leave_management_app/core/constants/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:leave_management_app/features/school/presentation/providers/school_providers.dart';
+import 'package:leave_management_app/core/utils/leave_theme_util.dart';
 
 class LeavePolicyPage extends ConsumerWidget {
   const LeavePolicyPage({super.key});
@@ -36,29 +37,78 @@ class LeavePolicyPage extends ConsumerWidget {
             return const Center(child: Text('School not found.'));
           }
 
-          final policies = school.leavePolicies;
+          final policies = Map<String, num>.from(school.leavePolicies);
+          
+          // Ensure Unpaid leave is always shown as an option in policies
+          if (!policies.keys.any((k) => k.toLowerCase() == 'unpaid' || k.toLowerCase() == 'unpaid leave')) {
+            policies['Unpaid'] = 0;
+          }
+
           if (policies.isEmpty) {
             return const Center(child: Text('No leave policies found.'));
           }
 
-          return ListView.separated(
-            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
-            itemCount: policies.length,
-            separatorBuilder: (_, __) => SizedBox(height: 16.h),
-            itemBuilder: (context, index) {
-              final type = policies.keys.elementAt(index);
-              final quota = policies[type]!;
-              final desc = quota > 0 
-                  ? 'Employees are entitled to $quota days of $type.' 
-                  : 'Employees can apply for $type without a set quota. Usually unpaid or requires special approval.';
-              return _buildPolicyCard(
-                title: type,
-                icon: Icons.article_outlined,
-                iconColor: AppColors.primary,
-                bgColor: AppColors.primarySubtle,
-                description: desc,
-              );
-            },
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Your Leave Allocations',
+                        style: TextStyle(
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        'Review the leave types available to you and their respective annual quotas according to your school\'s configuration.',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: AppColors.textSecondary,
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final type = policies.keys.elementAt(index);
+                      final quota = policies[type]!;
+                      
+                      final desc = quota > 0 
+                          ? 'You are entitled to a total of $quota days of $type Leave per calendar year. Weekends and public holidays are not deducted from this quota.' 
+                          : 'You can apply for $type Leave without a set quota. These leaves are generally unpaid or require special management approval.';
+                          
+                      final theme = LeaveThemeUtil.getTheme(type);
+
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: 16.h),
+                        child: _buildPolicyCard(
+                          title: type,
+                          icon: theme.icon,
+                          iconColor: theme.baseColor,
+                          bgColor: theme.backgroundColor,
+                          description: desc,
+                          quota: quota,
+                        ),
+                      );
+                    },
+                    childCount: policies.length,
+                  ),
+                ),
+              ),
+              SliverToBoxAdapter(child: SizedBox(height: 40.h)),
+            ],
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -73,6 +123,7 @@ class LeavePolicyPage extends ConsumerWidget {
     required Color iconColor,
     required Color bgColor,
     required String description,
+    required num quota,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -94,22 +145,46 @@ class LeavePolicyPage extends ConsumerWidget {
           Row(
             children: [
               Container(
-                padding: EdgeInsets.all(10.w),
+                padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
                   color: bgColor,
-                  borderRadius: BorderRadius.circular(12.r),
+                  borderRadius: BorderRadius.circular(16.r),
                 ),
                 child: Icon(icon, color: iconColor, size: 24.sp),
               ),
               SizedBox(width: 16.w),
               Expanded(
-                child: Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$title Leave',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 4.h),
+                    if (quota > 0)
+                      Text(
+                        '$quota Days Quota',
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w700,
+                          color: iconColor,
+                        ),
+                      )
+                    else
+                      Text(
+                        'Unpaid / No Quota',
+                        style: TextStyle(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ],
@@ -118,7 +193,7 @@ class LeavePolicyPage extends ConsumerWidget {
           Text(
             description,
             style: TextStyle(
-              fontSize: 13.sp,
+              fontSize: 14.sp,
               height: 1.5,
               color: AppColors.textSecondary,
             ),

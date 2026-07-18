@@ -18,13 +18,31 @@ class ProfilePage extends ConsumerWidget {
     final userInitials = user?.initials ?? 'JD';
     final userRole = user?.role == 'employee' ? 'Employee' : (user?.role ?? 'Senior Mobile Developer');
 
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
-      appBar: AppBar(
+    final currentUri = GoRouterState.of(context).uri.toString();
+    final backRoute = currentUri.startsWith('/school') 
+        ? AppRoutes.adminDashboard
+        : currentUri.startsWith('/system')
+            ? AppRoutes.superAdminDashboard
+            : AppRoutes.dashboard;
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          context.go(backRoute);
+        }
+      },
+      child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
-        elevation: 0,
-        title: Text(
-          'My Profile',
+        appBar: AppBar(
+          backgroundColor: AppColors.scaffoldBackground,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
+            onPressed: () => context.go(backRoute),
+          ),
+          title: Text(
+            'My Profile',
           style: TextStyle(
             color: AppColors.textPrimary,
             fontSize: 20.sp,
@@ -42,6 +60,7 @@ class ProfilePage extends ConsumerWidget {
               _buildMenuSection(context, ref, user?.role),
             ],
           ),
+        ),
         ),
       ),
     );

@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:leave_management_app/core/constants/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:leave_management_app/features/school/presentation/providers/school_providers.dart';
+import 'package:leave_management_app/features/leave/presentation/providers/leave_providers.dart';
+import 'package:leave_management_app/features/auth/domain/entities/user_entity.dart';
+import 'package:leave_management_app/features/leave/domain/entities/leave_entity.dart';
 
 class ReportsPage extends ConsumerWidget {
   const ReportsPage({super.key});
@@ -51,13 +54,33 @@ class ReportsPage extends ConsumerWidget {
                   schoolAsync.when(
                     data: (school) {
                       if (school == null) return const Center(child: Text('School not found'));
-                      return _buildUsageCard(school.leavePolicies);
+                      
+                      final usersAsync = ref.watch(schoolUsersProvider(school.id));
+                      final leavesAsync = ref.watch(allLeavesProvider(school.id));
+
+                      return usersAsync.when(
+                        data: (users) {
+                          return leavesAsync.when(
+                            data: (leaves) {
+                              return Column(
+                                children: [
+                                  _buildUsageCard(school.leavePolicies, users, leaves),
+                                  SizedBox(height: 24.h),
+                                  _buildTopTakersSection(users, leaves),
+                                ],
+                              );
+                            },
+                            loading: () => const Center(child: CircularProgressIndicator()),
+                            error: (err, _) => Center(child: Text('Error loading leaves: $err')),
+                          );
+                        },
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (err, _) => Center(child: Text('Error loading users: $err')),
+                      );
                     },
                     loading: () => const Center(child: CircularProgressIndicator()),
                     error: (err, _) => Center(child: Text('Error: $err')),
                   ),
-                  SizedBox(height: 24.h),
-                  _buildTopTakersSection(),
                   SizedBox(height: 80.h),
                 ],
               ),
@@ -68,7 +91,9 @@ class ReportsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildUsageCard(Map<String, int> leavePolicies) {
+  Widget _buildUsageCard(Map<String, int> leavePolicies, List<UserEntity> users, List<LeaveEntity> leaves) {
+    final activeUsersCount = users.where((u) => !u.isPending).length;
+
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -92,12 +117,23 @@ class ReportsPage extends ConsumerWidget {
           ),
           SizedBox(height: 20.h),
           ...leavePolicies.entries.map((e) {
+            final leaveType = e.key;
+            final quotaPerPerson = e.value;
+            final totalCapacity = activeUsersCount * quotaPerPerson;
+            
+            final currentYear = DateTime.now().year;
+            final usedDays = leaves
+                .where((l) => l.leaveType == leaveType && l.startDate.year == currentYear && l.status == 'approved')
+                .fold(0.0, (sum, l) => sum + l.durationDays);
+
+            final percent = totalCapacity > 0 ? (usedDays / totalCapacity).clamp(0.0, 1.0) : 0.0;
+
             return Padding(
               padding: EdgeInsets.only(bottom: 16.h),
               child: _buildProgressBar(
-                e.key, 
-                e.value > 0 ? '${e.value} Days' : 'No Quota', 
-                0.0, // No usage data yet
+                leaveType, 
+                quotaPerPerson > 0 ? '${usedDays.toStringAsFixed(1).replaceAll(RegExp(r'\\.0$'), '')} / $totalCapacity Days' : 'No Quota', 
+                percent,
                 AppColors.primary
               ),
             );
@@ -129,7 +165,21 @@ class ReportsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildTopTakersSection() {
+  Widget _buildTopTakersSection(List<UserEntity> users, List<LeaveEntity> leaves) {
+    final currentYear = DateTime.now().year;
+    
+    final Map<String, double> userLeaveTotals = {};
+    for (final leave in leaves) {
+      if (leave.startDate.year == currentYear && leave.status == 'approved') {
+        userLeaveTotals[leave.userId] = (userLeaveTotals[leave.userId] ?? 0.0) + leave.durationDays;
+      }
+    }
+
+    final sortedEntries = userLeaveTotals.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    
+    final topTakers = sortedEntries.take(3).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -142,49 +192,63 @@ class ReportsPage extends ConsumerWidget {
           ),
         ),
         SizedBox(height: 16.h),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(20.r),
-            border: Border.all(color: AppColors.borderLight),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 6,
-                offset: const Offset(0, 4),
-              ),
-            ],
+        if (topTakers.isEmpty)
+          const Text('No leaves taken this year.', style: TextStyle(color: AppColors.textSecondary))
+        else
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20.r),
+              border: Border.all(color: AppColors.borderLight),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.02),
+                  blurRadius: 6,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                for (var i = 0; i < topTakers.length; i++) ...[
+                  if (i > 0) Divider(height: 1, color: AppColors.borderLight),
+                  Builder(builder: (context) {
+                    final entry = topTakers[i];
+                    final user = users.firstWhere(
+                      (u) => u.id == entry.key, 
+                      orElse: () => UserEntity(
+                        id: entry.key,
+                        email: '',
+                        schoolId: '',
+                        fullName: 'Unknown User',
+                        role: 'employee',
+                      )
+                    );
+                    
+                    final colors = [const Color(0xFFF43F5E), const Color(0xFFF59E0B), const Color(0xFF0EA5E9)];
+                    final avatarColor = colors[i % colors.length];
+
+                    return _buildTopTakerItem(
+                      avatar: user.initials,
+                      avatarColor: avatarColor,
+                      name: user.fullName,
+                      role: _formatRole(user.role),
+                      days: entry.value.toStringAsFixed(1).replaceAll(RegExp(r'\\.0$'), ''),
+                    );
+                  }),
+                ],
+              ],
+            ),
           ),
-          child: Column(
-            children: [
-              _buildTopTakerItem(
-                avatar: 'AF',
-                avatarColor: const Color(0xFFF43F5E),
-                name: 'Amali Fernando',
-                role: 'QA Engineer',
-                days: '12',
-              ),
-              Divider(height: 1, color: AppColors.borderLight),
-              _buildTopTakerItem(
-                avatar: 'KJ',
-                avatarColor: const Color(0xFFF59E0B),
-                name: 'Kasun Jayawardena',
-                role: 'UI Designer',
-                days: '09',
-              ),
-              Divider(height: 1, color: AppColors.borderLight),
-              _buildTopTakerItem(
-                avatar: 'NP',
-                avatarColor: const Color(0xFF0EA5E9),
-                name: 'Nuwan Perera',
-                role: 'Backend Developer',
-                days: '07',
-              ),
-            ],
-          ),
-        ),
       ],
     );
+  }
+
+  String _formatRole(String role) {
+    if (role == 'school_admin') return 'School Admin';
+    if (role == 'super_admin') return 'Super Admin';
+    if (role == 'manager') return 'Manager';
+    return 'Employee';
   }
 
   Widget _buildTopTakerItem({
