@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:leave_management_app/core/constants/app_colors.dart';
 import 'package:leave_management_app/core/router/app_router.dart';
 import 'package:leave_management_app/features/auth/presentation/providers/auth_provider.dart';
+import 'package:leave_management_app/features/auth/domain/entities/user_entity.dart';
+import 'package:leave_management_app/features/leave/presentation/providers/leave_providers.dart';
 
 class ProfilePage extends ConsumerWidget {
   const ProfilePage({super.key});
@@ -57,7 +59,7 @@ class ProfilePage extends ConsumerWidget {
             children: [
               _buildProfileHeader(userName, userInitials, userRole, user?.departmentId),
               SizedBox(height: 32.h),
-              _buildMenuSection(context, ref, user?.role),
+              _buildMenuSection(context, ref, user),
             ],
           ),
         ),
@@ -140,10 +142,20 @@ class ProfilePage extends ConsumerWidget {
     );
   }
 
-  Widget _buildMenuSection(BuildContext context, WidgetRef ref, String? role) {
+  Widget _buildMenuSection(BuildContext context, WidgetRef ref, UserEntity? user) {
+    final role = user?.role;
     final isSuperAdmin = role == 'super_admin';
     final isAdmin = role == 'school_admin' || isSuperAdmin;
     final isManager = role == 'manager' || isAdmin;
+
+    int pendingCount = 0;
+    if (user != null && (user.isManager || user.isSchoolAdmin || user.isSuperAdmin)) {
+      final pendingLeavesAsync = ref.watch(pendingLeavesProvider(user.schoolId));
+      pendingCount = pendingLeavesAsync.maybeWhen(
+        data: (leaves) => leaves.length,
+        orElse: () => 0,
+      );
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -177,6 +189,24 @@ class ProfilePage extends ConsumerWidget {
               icon: Icons.admin_panel_settings_outlined,
               title: 'Switch to Admin Console',
               iconColor: AppColors.primary,
+              trailingWidget: pendingCount > 0
+                  ? Container(
+                      padding: EdgeInsets.all(6.w),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        pendingCount > 9 ? '9+' : pendingCount.toString(),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.bold,
+                          height: 1.0,
+                        ),
+                      ),
+                    )
+                  : null,
               onTap: () {
                 context.go(AppRoutes.adminDashboard);
               },
@@ -242,6 +272,7 @@ class ProfilePage extends ConsumerWidget {
     Color? textColor,
     Color? iconColor,
     bool showChevron = true,
+    Widget? trailingWidget,
   }) {
     return ListTile(
       contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
@@ -261,9 +292,9 @@ class ProfilePage extends ConsumerWidget {
           color: textColor ?? AppColors.textPrimary,
         ),
       ),
-      trailing: showChevron
+      trailing: trailingWidget ?? (showChevron
           ? Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 20.sp)
-          : null,
+          : null),
       onTap: onTap,
     );
   }
