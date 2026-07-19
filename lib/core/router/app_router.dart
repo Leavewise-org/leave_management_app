@@ -29,6 +29,7 @@ import '../../features/manager/presentation/pages/reports_page.dart';
 import '../../features/school/presentation/pages/admin_dashboard_page.dart';
 import '../../features/school/presentation/pages/manage_employees_page.dart';
 import '../../features/school/presentation/pages/school_settings_page.dart';
+import '../../features/holidays/presentation/pages/manage_holidays_page.dart';
 import '../../features/super_admin/presentation/pages/super_admin_dashboard_page.dart';
 import '../../features/super_admin/presentation/pages/manage_schools_page.dart';
 import '../../features/super_admin/presentation/pages/system_settings_page.dart';
@@ -62,20 +63,28 @@ abstract class AppRoutes {
   static const String schoolSettings = '/school/settings';
   static const String adminDashboard = '/school/dashboard';
   static const String manageEmployees = '/school/employees';
+  static const String manageHolidays = '/school/holidays';
   // Super Admin
   static const String superAdminDashboard = '/system/dashboard';
   static const String manageSchools = '/system/schools';
   static const String systemSettings = '/system/settings';
 }
 
-class GoRouterRefreshStream extends ChangeNotifier {
-  GoRouterRefreshStream(Stream<dynamic> stream) {
+class AppRouterNotifier extends ChangeNotifier {
+  AppRouterNotifier(Stream<dynamic> stream) {
     notifyListeners();
     _subscription = stream.asBroadcastStream().listen(
       (dynamic _) => notifyListeners(),
     );
+    
+    // Enforce a minimum splash duration so animations can play
+    Future.delayed(const Duration(milliseconds: 3500), () {
+      isSplashFinished = true;
+      notifyListeners();
+    });
   }
 
+  bool isSplashFinished = false;
   late final StreamSubscription<dynamic> _subscription;
 
   @override
@@ -89,7 +98,7 @@ class GoRouterRefreshStream extends ChangeNotifier {
 @Riverpod(keepAlive: true)
 GoRouter appRouter(Ref ref) {
   final authStream = ref.watch(authStateProvider.stream);
-  final notifier = GoRouterRefreshStream(authStream);
+  final notifier = AppRouterNotifier(authStream);
 
   ref.onDispose(() {
     notifier.dispose();
@@ -103,8 +112,8 @@ GoRouter appRouter(Ref ref) {
     redirect: (context, state) {
       final userState = ref.read(authStateProvider);
       
-      // If the stream is still loading its very first value, wait in splash
-      if (userState.isLoading && !userState.hasValue) {
+      // If the stream is still loading its very first value, or splash timer is not finished, wait in splash
+      if ((userState.isLoading && !userState.hasValue) || !notifier.isSplashFinished) {
         return AppRoutes.splash;
       }
       
@@ -245,6 +254,11 @@ GoRouter appRouter(Ref ref) {
         path: AppRoutes.leavePolicy,
         name: 'leavePolicy',
         builder: (context, state) => const LeavePolicyPage(),
+      ),
+      GoRoute(
+        path: AppRoutes.manageHolidays,
+        name: 'manageHolidays',
+        builder: (context, state) => const ManageHolidaysPage(),
       ),
 
       // Manager routes

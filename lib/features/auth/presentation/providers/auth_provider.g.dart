@@ -126,7 +126,7 @@ final signUpNotifierProvider =
 
 typedef _$SignUpNotifier = AutoDisposeNotifier<SignInState>;
 String _$forgotPasswordNotifierHash() =>
-    r'343fce2b82574d1f28f55e347d92c30130f583fe';
+    r'8d87f10c451de21e4dd46cead9904e0ebda6b2ea';
 
 /// See also [ForgotPasswordNotifier].
 @ProviderFor(ForgotPasswordNotifier)

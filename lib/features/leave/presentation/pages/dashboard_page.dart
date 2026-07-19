@@ -27,7 +27,6 @@ class DashboardPage extends ConsumerWidget {
     final userName = user?.fullName ?? 'Employee Name';
     final userInitials = user?.initials ?? 'EMP';
     final isPending = user?.role == 'pending';
-
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: AppRefreshIndicator(
@@ -67,6 +66,14 @@ class DashboardPage extends ConsumerWidget {
   }
 
   Widget _buildAppBar(String name, String initials, String schoolId, BuildContext context) {
+    final hour = DateTime.now().hour;
+    String greeting = 'Good morning,';
+    if (hour >= 12 && hour < 17) {
+      greeting = 'Good afternoon,';
+    } else if (hour >= 17) {
+      greeting = 'Good evening,';
+    }
+
     return SliverAppBar(
       expandedHeight: 120.h,
       floating: false,
@@ -87,7 +94,7 @@ class DashboardPage extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Good morning,',
+                        greeting,
                         style: TextStyle(
                           fontSize: 13.sp,
                           color: Colors.white.withOpacity(0.8),
@@ -132,42 +139,17 @@ class DashboardPage extends ConsumerWidget {
                   ),
                 ),
                 SizedBox(width: 16.w),
-                Stack(
-                  alignment: Alignment.topRight,
-                  children: [
-                    CircleAvatar(
-                      radius: 22.r,
-                      backgroundColor: AppColors.primarySubtle,
-                      child: Text(
-                        initials,
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16.sp,
-                        ),
-                      ),
+                CircleAvatar(
+                  radius: 22.r,
+                  backgroundColor: AppColors.primarySubtle,
+                  child: Text(
+                    initials,
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16.sp,
                     ),
-                    Positioned(
-                      top: 0,
-                      right: 0,
-                      child: Container(
-                        padding: EdgeInsets.all(4.w),
-                        decoration: BoxDecoration(
-                          color: AppColors.notifBadge,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.primary, width: 2),
-                        ),
-                        child: Text(
-                          '2',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ],
             ),
@@ -366,7 +348,7 @@ class DashboardPage extends ConsumerWidget {
               label: 'Apply\nLeave',
               color: AppColors.primary,
               backgroundColor: AppColors.quickBlueBackground,
-              onTap: () => context.go(AppRoutes.applyLeave),
+              onTap: () => context.push(AppRoutes.applyLeave),
             ),
             QuickActionBtn(
               icon: Icons.calendar_today_outlined,
@@ -387,7 +369,7 @@ class DashboardPage extends ConsumerWidget {
               label: 'Leave\nPolicies',
               color: AppColors.textSecondary,
               backgroundColor: Colors.transparent,
-              onTap: () {},
+              onTap: () => context.push(AppRoutes.leavePolicy),
             ),
           ],
         ),
@@ -503,9 +485,13 @@ class DashboardPage extends ConsumerWidget {
         ? entity.durationDays.toInt().toString()
         : entity.durationDays.toString();
 
-    final dateStr = entity.durationDays == 1
+    final isSameDay = entity.startDate.year == entity.endDate.year && 
+                      entity.startDate.month == entity.endDate.month && 
+                      entity.startDate.day == entity.endDate.day;
+
+    final dateStr = isSameDay
         ? '${dateFormat.format(entity.startDate)} (1 Day)'
-        : '${dateFormat.format(entity.startDate)} - ${dateFormat.format(entity.endDate)} ($durationStr Days)';
+        : '${dateFormat.format(entity.startDate)} \u2013 ${dateFormat.format(entity.endDate)} ($durationStr Days)';
 
     return _buildListItem(
       icon: theme.icon,

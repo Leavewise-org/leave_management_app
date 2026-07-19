@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -19,54 +20,17 @@ class _SplashPageState extends ConsumerState<SplashPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.topBar,
+      backgroundColor: Colors.white,
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // App icon
-            Container(
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.school_rounded,
-                color: Colors.white,
-                size: 40,
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Leave Manager',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 22,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0.3,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Multi-Tenant School Platform',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.65),
-                fontSize: 13,
-              ),
-            ),
-            const SizedBox(height: 48),
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
+        child: Image.asset(
+          'assets/icons/app_icon.png',
+          width: 85, // Reduced from 110
+          height: 85,
+          fit: BoxFit.contain,
+        )
+            .animate()
+            .scale(duration: 600.ms, curve: Curves.easeOutBack)
+            .fadeIn(duration: 500.ms),
       ),
     );
   }

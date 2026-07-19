@@ -64,6 +64,12 @@ service cloud.firestore {
         getMyRole() in ['school_admin', 'super_admin'];
     }
 
+    // ── HOLIDAYS ──────────────────────────────
+    match /holidays/{holidayId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && getMyRole() in ['school_admin', 'super_admin'];
+    }
+
     // ── SCHOOLS ───────────────────────────────
     match /schools/{schoolId} {
       // Anyone logged in can read a school to verify the ID when joining

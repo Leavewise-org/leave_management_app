@@ -212,7 +212,11 @@ class ApprovalsPage extends ConsumerWidget {
         ? entity.durationDays.toInt().toString()
         : entity.durationDays.toString();
 
-    final dateStr = entity.durationDays == 1
+    final isSameDay = entity.startDate.year == entity.endDate.year && 
+                      entity.startDate.month == entity.endDate.month && 
+                      entity.startDate.day == entity.endDate.day;
+
+    final dateStr = isSameDay
         ? dateFormat.format(entity.startDate)
         : '${dateFormat.format(entity.startDate)} \u2013 ${dateFormat.format(entity.endDate)}';
     
@@ -223,7 +227,7 @@ class ApprovalsPage extends ConsumerWidget {
       avatarColor: AppColors.primary,
       name: entity.userName,
       role: 'Employee',
-      duration: '$durationStr Day${entity.durationDays > 1 ? 's' : ''}',
+      duration: '$durationStr Working Day${entity.durationDays > 1 ? 's' : ''}',
       leaveType: '${entity.leaveType} Leave',
       leaveIcon: theme.icon,
       leaveColor: theme.baseColor,

@@ -9,6 +9,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:leave_management_app/features/school/presentation/providers/school_providers.dart';
 import 'package:leave_management_app/core/utils/leave_theme_util.dart';
+import 'package:leave_management_app/features/holidays/presentation/providers/holiday_providers.dart';
+import 'package:leave_management_app/features/leave/domain/services/leave_calculation_service.dart';
 
 class ApplyLeavePage extends ConsumerStatefulWidget {
   const ApplyLeavePage({super.key});
@@ -29,7 +31,7 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
   Future<void> _selectDateRange(BuildContext context) async {
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
-      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      firstDate: DateTime.now(), // Prevents past date selection
       lastDate: DateTime.now().add(const Duration(days: 365)),
       initialDateRange: _startDate != null && _endDate != null
           ? DateTimeRange(start: _startDate!, end: _endDate!)
@@ -92,12 +94,9 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
     });
 
     return PopScope(
-      canPop: false,
+      canPop: context.canPop(),
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        if(Navigator.of(context).canPop()){
-          Navigator.of(context).pop();
-        }else{
+        if (!didPop) {
           context.go('/home');
         }
       },
@@ -108,7 +107,13 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
-            onPressed: () => context.pop(),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            },
           ),
           title: Text(
             'New Request',
@@ -133,13 +138,13 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
                         SizedBox(height: 16.h),
                         _buildLeaveTypeSection(ref),
                         SizedBox(height: 24.h),
-                        _buildDateDurationSection(),
+                        _buildDateDurationSection(ref),
                         SizedBox(height: 24.h),
                         _buildReasonSection(),
                         SizedBox(height: 24.h),
                         _buildAttachmentSection(),
                         const Spacer(),
-                        _buildSubmitButton(user),
+                        _buildSubmitButton(user, ref),
                         SizedBox(height: 32.h),
                       ],
                     ),
@@ -241,20 +246,49 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
     );
   }
 
-  Widget _buildDateDurationSection() {
+  Widget _buildDateDurationSection(WidgetRef ref) {
     final startText = _startDate != null ? DateFormat('MMM dd, yyyy').format(_startDate!) : 'Start Date';
     final endText = _endDate != null ? DateFormat('MMM dd, yyyy').format(_endDate!) : 'End Date';
+
+    // Calculate requested days
+    final holidaysAsync = ref.watch(holidaysByYearProvider(_startDate?.year ?? DateTime.now().year));
+    final holidays = holidaysAsync.value ?? [];
+    double calculatedWorkingDays = 0.0;
+    if (_startDate != null && _endDate != null) {
+      calculatedWorkingDays = LeaveCalculationService.calculateWorkingDays(_startDate!, _endDate!, !_isFullDay, holidays);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Date & Duration',
-          style: TextStyle(
-            fontSize: 14.sp,
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Date & Duration',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            if (_startDate != null && _endDate != null)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: AppColors.primarySubtle,
+                  borderRadius: BorderRadius.circular(20.r),
+                ),
+                child: Text(
+                  '$calculatedWorkingDays Working Days',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+          ],
         ),
         SizedBox(height: 12.h),
         GestureDetector(
@@ -452,7 +486,7 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
     );
   }
 
-  Widget _buildSubmitButton(dynamic user) {
+  Widget _buildSubmitButton(dynamic user, WidgetRef ref) {
     final isLoading = ref.watch(submitLeaveNotifierProvider).isLoading;
 
     return SizedBox(
@@ -482,9 +516,53 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
 
                 // Check remaining balance
                 final isUnpaid = _selectedLeaveType.toLowerCase() == 'unpaid' || _selectedLeaveType.toLowerCase() == 'unpaid leave';
+                
+                // Get all user leaves to check for balance AND overlaps
+                final userLeavesAsync = ref.read(userLeavesProvider(user.id));
+                final userLeaves = userLeavesAsync.value ?? [];
+
+                // OVERLAP CHECK: Prevent double-applying for the same dates
+                bool hasOverlap = false;
+                for (final l in userLeaves) {
+                  if (l.status != 'rejected') {
+                    // Strip time for accurate date-only comparison
+                    final newStart = DateTime(_startDate!.year, _startDate!.month, _startDate!.day);
+                    final newEnd = DateTime(_endDate!.year, _endDate!.month, _endDate!.day);
+                    final oldStart = DateTime(l.startDate.year, l.startDate.month, l.startDate.day);
+                    final oldEnd = DateTime(l.endDate.year, l.endDate.month, l.endDate.day);
+
+                    // Overlap formula: (Start A <= End B) and (End A >= Start B)
+                    if (newStart.compareTo(oldEnd) <= 0 && newEnd.compareTo(oldStart) >= 0) {
+                      hasOverlap = true;
+                      break;
+                    }
+                  }
+                }
+
+                if (hasOverlap) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('You have already applied for leave during these dates.'),
+                      backgroundColor: AppColors.rejected,
+                    ),
+                  );
+                  return;
+                }
+                
+                // Calculate Exact Working Days
+                final holidaysAsync = ref.read(holidaysByYearProvider(_startDate!.year));
+                final holidays = holidaysAsync.value ?? [];
+                final requestedDays = LeaveCalculationService.calculateWorkingDays(_startDate!, _endDate!, !_isFullDay, holidays);
+
+                if (requestedDays <= 0) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Your selected dates contain 0 working days (weekends/holidays).')),
+                  );
+                  return;
+                }
+
                 if (!isUnpaid) {
                   final schoolAsync = ref.read(currentSchoolProvider);
-                  final userLeavesAsync = ref.read(userLeavesProvider(user.id));
                   
                   if (schoolAsync.isLoading || userLeavesAsync.isLoading) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -494,7 +572,6 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
                   }
                   
                   final school = schoolAsync.value;
-                  final userLeaves = userLeavesAsync.value ?? [];
                   
                   if (school != null) {
                     final quota = school.leavePolicies[_selectedLeaveType]?.toDouble() ?? 0.0;
@@ -505,10 +582,6 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
                       }
                     }
                     final remainingBalance = quota - takenDays;
-                    
-                    final requestedDays = _isFullDay 
-                        ? _endDate!.difference(_startDate!).inDays + 1.0
-                        : 0.5;
 
                     if (requestedDays > remainingBalance) {
                       final remainingStr = remainingBalance == remainingBalance.truncateToDouble()
@@ -535,6 +608,7 @@ class _ApplyLeavePageState extends ConsumerState<ApplyLeavePage> {
                       endDate: _endDate!,
                       reason: _reasonController.text.trim(),
                       isHalfDay: !_isFullDay,
+                      durationDays: requestedDays,
                     );
               },
         style: ElevatedButton.styleFrom(

@@ -10,6 +10,7 @@ class LeaveEntity {
   final String status; // 'pending', 'approved', 'rejected'
   final String? attachmentUrl;
   final bool isHalfDay;
+  final double durationDays; // Now explicitly stored
   final DateTime createdAt;
 
   const LeaveEntity({
@@ -24,13 +25,7 @@ class LeaveEntity {
     required this.status,
     this.attachmentUrl,
     this.isHalfDay = false,
+    required this.durationDays,
     required this.createdAt,
   });
-
-  /// Duration in days (inclusive). Returns 0.5 if it's a half day.
-  double get durationDays {
-    if (isHalfDay) return 0.5;
-    final diff = endDate.difference(startDate).inDays;
-    return (diff >= 0 ? diff + 1 : 0).toDouble();
-  }
 }
