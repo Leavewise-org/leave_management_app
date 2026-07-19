@@ -101,7 +101,7 @@ class _JoinSchoolPageState extends ConsumerState<JoinSchoolPage> {
                     TextFormField(
                       controller: _joinIdCtrl,
                       decoration: InputDecoration(
-                        hintText: 'e.g. ananda-college',
+                        hintText: 'e.g. your-school-id',
                         filled: true,
                         fillColor: AppColors.surface,
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
