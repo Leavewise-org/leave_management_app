@@ -15,7 +15,6 @@ class _JoinSchoolPageState extends ConsumerState<JoinSchoolPage> {
   final _joinIdCtrl = TextEditingController();
 
   bool _isLoading = false;
-  String? _errorMsg;
 
   @override
   void dispose() {
@@ -27,7 +26,6 @@ class _JoinSchoolPageState extends ConsumerState<JoinSchoolPage> {
     if (!_joinFormKey.currentState!.validate()) return;
     setState(() {
       _isLoading = true;
-      _errorMsg = null;
     });
 
     try {
@@ -36,7 +34,20 @@ class _JoinSchoolPageState extends ConsumerState<JoinSchoolPage> {
           .joinOrganization(_joinIdCtrl.text.trim());
       // The router should automatically redirect upon Firestore update
     } catch (e) {
-      if (mounted) setState(() => _errorMsg = e.toString());
+      if (mounted) {
+        final errorText = e.toString().replaceAll('Exception: ', '');
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              errorText,
+              style: const TextStyle(color: Colors.white),
+            ),
+            backgroundColor: AppColors.rejected,
+            behavior: SnackBarBehavior.fixed,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -62,21 +73,6 @@ class _JoinSchoolPageState extends ConsumerState<JoinSchoolPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (_errorMsg != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.rejectedBackground,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    _errorMsg!,
-                    style: const TextStyle(color: AppColors.rejectedText),
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
-              
               const Text(
                 'Join an Existing School',
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
