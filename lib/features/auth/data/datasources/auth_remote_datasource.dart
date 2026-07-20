@@ -136,6 +136,11 @@ class AuthRemoteDatasource {
     final authUser = _auth.currentUser;
     if (authUser == null) throw Exception('Not authenticated');
 
+    final schoolDoc = await _firestore.collection('schools').doc(schoolId).get();
+    if (!schoolDoc.exists) {
+      throw Exception('School ID is incorrect. No such school exists.');
+    }
+
     await _firestore.collection('profiles').doc(authUser.uid).update({
       'school_id': schoolId,
       'role': 'pending',

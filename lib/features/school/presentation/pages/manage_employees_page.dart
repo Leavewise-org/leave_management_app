@@ -20,14 +20,21 @@ class ManageEmployeesPage extends ConsumerWidget {
 
     final usersAsync = ref.watch(schoolUsersProvider(currentUser.schoolId));
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          context.go('/school/dashboard');
+        }
+      },
+      child: Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded, color: AppColors.textPrimary, size: 28),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/school/dashboard'),
         ),
         title: const Text(
           'Manage Employees',
@@ -99,6 +106,7 @@ class ManageEmployeesPage extends ConsumerWidget {
               ),
             ),
           ],
+        ),
         ),
       ),
     );

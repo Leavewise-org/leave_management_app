@@ -137,3 +137,48 @@ class SignUpNotifier extends _$SignUpNotifier {
 
   void clearError() => state = state.copyWith(clearFailure: true);
 }
+
+// ── Forgot Password notifier ─────────────────────────────────────
+
+@riverpod
+class ForgotPasswordNotifier extends _$ForgotPasswordNotifier {
+  @override
+  SignInState build() => const SignInState();
+
+  Future<void> sendPasswordResetEmail(String email) async {
+    state = state.copyWith(isLoading: true, clearFailure: true);
+
+    try {
+      await ref.read(firebaseAuthProvider).sendPasswordResetEmail(
+        email: email,
+      );
+
+      state = state.copyWith(isLoading: false, user: const UserEntity(id: 'sent', email: '', fullName: '', role: '', schoolId: ''));
+    } on FirebaseAuthException catch (e) {
+      state = state.copyWith(isLoading: false, failure: UnknownAuthFailure(e.message ?? e.toString()));
+    } catch (e) {
+      debugPrint('❌ Unexpected reset error: $e');
+      state = state.copyWith(isLoading: false, failure: UnknownAuthFailure(e.toString()));
+    }
+  }
+
+  Future<void> confirmPasswordReset({required String oobCode, required String newPassword}) async {
+    state = state.copyWith(isLoading: true, clearFailure: true);
+
+    try {
+      await ref.read(firebaseAuthProvider).confirmPasswordReset(
+        code: oobCode,
+        newPassword: newPassword,
+      );
+
+      state = state.copyWith(isLoading: false, user: const UserEntity(id: 'reset', email: '', fullName: '', role: '', schoolId: ''));
+    } on FirebaseAuthException catch (e) {
+      state = state.copyWith(isLoading: false, failure: UnknownAuthFailure(e.message ?? e.toString()));
+    } catch (e) {
+      debugPrint('❌ Unexpected confirm error: $e');
+      state = state.copyWith(isLoading: false, failure: UnknownAuthFailure(e.toString()));
+    }
+  }
+
+  void clearError() => state = state.copyWith(clearFailure: true);
+}

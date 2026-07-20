@@ -19,6 +19,7 @@ class ApprovalsPage extends ConsumerWidget {
     if (user == null) return const Scaffold();
 
     final pendingLeavesAsync = ref.watch(pendingLeavesProvider(user.schoolId));
+    final allLeavesAsync = ref.watch(allLeavesProvider(user.schoolId));
 
     ref.listen(manageLeaveNotifierProvider, (prev, next) {
       if (next.failure != null) {
@@ -28,43 +29,78 @@ class ApprovalsPage extends ConsumerWidget {
       }
     });
 
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
-      appBar: AppBar(
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
-          onPressed: () => context.pop(),
-        ),
-        title: Text(
-          'Approvals',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 20.sp,
-            fontWeight: FontWeight.bold,
+        appBar: AppBar(
+          backgroundColor: AppColors.scaffoldBackground,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
+            onPressed: () => context.pop(),
+          ),
+          title: Text(
+            'Approvals',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 20.sp,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          bottom: const TabBar(
+            indicatorColor: AppColors.primary,
+            labelColor: AppColors.primary,
+            unselectedLabelColor: AppColors.textSecondary,
+            tabs: [
+              Tab(text: 'Pending'),
+              Tab(text: 'History'),
+            ],
           ),
         ),
-      ),
-      body: AppRefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(pendingLeavesProvider(user.schoolId));
-        },
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
-                child: pendingLeavesAsync.when(
-                  data: (leaves) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildPendingBadge(leaves.length),
-                        SizedBox(height: 24.h),
-                        if (leaves.isEmpty)
-                          Center(
+        body: TabBarView(
+          children: [
+            // --- PENDING TAB ---
+            AppRefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(pendingLeavesProvider(user.schoolId));
+              },
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                      child: pendingLeavesAsync.when(
+                        data: (leaves) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildPendingBadge(leaves.length),
+                              SizedBox(height: 24.h),
+                              if (leaves.isEmpty)
+                                Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 40.h),
+                                    child: Text(
+                                      'No pending requests right now.',
+                                      style: TextStyle(color: AppColors.textSecondary, fontSize: 16.sp),
+                                    ),
+                                  ),
+                                )
+                              else
+                                for (final leave in leaves) ...[
+                                  _buildApprovalCardFromEntity(ref, leave, isHistory: false),
+                                  SizedBox(height: 16.h),
+                                ],
+                              SizedBox(height: 80.h),
+                            ],
+                          );
+                        },
+                        loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
+                        error: (e, st) {
+                          print('Error loading approvals: $e');
+                          return Center(
                             child: Padding(
                               padding: EdgeInsets.symmetric(vertical: 40.h),
                               child: Text(
@@ -72,30 +108,69 @@ class ApprovalsPage extends ConsumerWidget {
                                 style: TextStyle(color: AppColors.textSecondary, fontSize: 16.sp),
                               ),
                             ),
-                          )
-                        else
-                          for (final leave in leaves) ...[
-                            _buildApprovalCardFromEntity(ref, leave),
-                            SizedBox(height: 16.h),
-                          ],
-                        SizedBox(height: 80.h),
-                      ],
-                    );
-                  },
-                  loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
-                  error: (e, st) {
-                    print('Error loading approvals: $e');
-                    return Center(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 40.h),
-                        child: Text(
-                          'No pending requests right now.',
-                          style: TextStyle(color: AppColors.textSecondary, fontSize: 16.sp),
-                        ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // --- HISTORY TAB ---
+            AppRefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(allLeavesProvider(user.schoolId));
+              },
+              child: CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+                      child: allLeavesAsync.when(
+                        data: (allLeaves) {
+                          final historyLeaves = allLeaves.where((l) => l.status != 'pending').toList();
+                          
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              if (historyLeaves.isEmpty)
+                                Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 40.h),
+                                    child: Text(
+                                      'No past approvals found.',
+                                      style: TextStyle(color: AppColors.textSecondary, fontSize: 16.sp),
+                                    ),
+                                  ),
+                                )
+                              else
+                                for (final leave in historyLeaves) ...[
+                                  _buildApprovalCardFromEntity(ref, leave, isHistory: true),
+                                  SizedBox(height: 16.h),
+                                ],
+                              SizedBox(height: 80.h),
+                            ],
+                          );
+                        },
+                        loading: () => const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator())),
+                        error: (e, st) {
+                          print('Error loading history: $e');
+                          return Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 40.h),
+                              child: Text(
+                                'Error loading history.',
+                                style: TextStyle(color: AppColors.textSecondary, fontSize: 16.sp),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -129,7 +204,7 @@ class ApprovalsPage extends ConsumerWidget {
     );
   }
 
-  Widget _buildApprovalCardFromEntity(WidgetRef ref, LeaveEntity entity) {
+  Widget _buildApprovalCardFromEntity(WidgetRef ref, LeaveEntity entity, {required bool isHistory}) {
     final theme = LeaveThemeUtil.getTheme(entity.leaveType);
 
     final dateFormat = DateFormat('MMM dd, yyyy');
@@ -137,7 +212,11 @@ class ApprovalsPage extends ConsumerWidget {
         ? entity.durationDays.toInt().toString()
         : entity.durationDays.toString();
 
-    final dateStr = entity.durationDays == 1
+    final isSameDay = entity.startDate.year == entity.endDate.year && 
+                      entity.startDate.month == entity.endDate.month && 
+                      entity.startDate.day == entity.endDate.day;
+
+    final dateStr = isSameDay
         ? dateFormat.format(entity.startDate)
         : '${dateFormat.format(entity.startDate)} \u2013 ${dateFormat.format(entity.endDate)}';
     
@@ -148,13 +227,15 @@ class ApprovalsPage extends ConsumerWidget {
       avatarColor: AppColors.primary,
       name: entity.userName,
       role: 'Employee',
-      duration: '$durationStr Day${entity.durationDays > 1 ? 's' : ''}',
+      duration: '$durationStr Working Day${entity.durationDays > 1 ? 's' : ''}',
       leaveType: '${entity.leaveType} Leave',
       leaveIcon: theme.icon,
       leaveColor: theme.baseColor,
       dateRange: dateStr,
       reason: entity.reason,
       attachment: entity.attachmentUrl,
+      isHistory: isHistory,
+      status: entity.status,
     );
   }
 
@@ -180,6 +261,8 @@ class ApprovalsPage extends ConsumerWidget {
     required String dateRange,
     required String reason,
     String? attachment,
+    required bool isHistory,
+    required String status,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -225,21 +308,38 @@ class ApprovalsPage extends ConsumerWidget {
                   ],
                 ),
               ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                decoration: BoxDecoration(
-                  color: durationBg,
-                  borderRadius: BorderRadius.circular(12.r),
-                ),
-                child: Text(
-                  duration,
-                  style: TextStyle(
-                    fontSize: 10.sp,
-                    fontWeight: FontWeight.bold,
-                    color: durationColor,
+              if (isHistory)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: status == 'approved' ? AppColors.approvedBackground : AppColors.rejectedBackground,
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Text(
+                    status.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                      color: status == 'approved' ? AppColors.approvedText : AppColors.rejectedText,
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: durationBg,
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                  child: Text(
+                    duration,
+                    style: TextStyle(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.bold,
+                      color: durationColor,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
           SizedBox(height: 16.h),
@@ -252,42 +352,44 @@ class ApprovalsPage extends ConsumerWidget {
             SizedBox(height: 8.h),
             _buildDetailRow(Icons.attach_file, AppColors.primary, attachment),
           ],
-          SizedBox(height: 20.h),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    ref.read(manageLeaveNotifierProvider.notifier).updateStatus(leaveId, 'rejected');
-                  },
-                  icon: Icon(Icons.close, size: 18.sp),
-                  label: const Text('Reject'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.rejected,
-                    side: const BorderSide(color: AppColors.rejectedBackground),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
+          if (!isHistory) ...[
+            SizedBox(height: 20.h),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      ref.read(manageLeaveNotifierProvider.notifier).updateStatus(leaveId, 'rejected');
+                    },
+                    icon: Icon(Icons.close, size: 18.sp),
+                    label: const Text('Reject'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.rejected,
+                      side: const BorderSide(color: AppColors.rejectedBackground),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    ref.read(manageLeaveNotifierProvider.notifier).updateStatus(leaveId, 'approved');
-                  },
-                  icon: Icon(Icons.check, size: 18.sp),
-                  label: const Text('Approve'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.approvedText,
-                    side: const BorderSide(color: AppColors.approvedBackground),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                SizedBox(width: 12.w),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      ref.read(manageLeaveNotifierProvider.notifier).updateStatus(leaveId, 'approved');
+                    },
+                    icon: Icon(Icons.check, size: 18.sp),
+                    label: const Text('Approve'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.approvedText,
+                      side: const BorderSide(color: AppColors.approvedBackground),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.r)),
+                      padding: EdgeInsets.symmetric(vertical: 12.h),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );

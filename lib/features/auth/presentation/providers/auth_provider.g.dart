@@ -125,5 +125,22 @@ final signUpNotifierProvider =
 );
 
 typedef _$SignUpNotifier = AutoDisposeNotifier<SignInState>;
+String _$forgotPasswordNotifierHash() =>
+    r'8d87f10c451de21e4dd46cead9904e0ebda6b2ea';
+
+/// See also [ForgotPasswordNotifier].
+@ProviderFor(ForgotPasswordNotifier)
+final forgotPasswordNotifierProvider =
+    AutoDisposeNotifierProvider<ForgotPasswordNotifier, SignInState>.internal(
+  ForgotPasswordNotifier.new,
+  name: r'forgotPasswordNotifierProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$forgotPasswordNotifierHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$ForgotPasswordNotifier = AutoDisposeNotifier<SignInState>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

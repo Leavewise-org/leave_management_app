@@ -21,13 +21,16 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _nameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _confirmPassCtrl = TextEditingController();
   bool _obscurePass = true;
+  bool _obscureConfirmPass = true;
 
   @override
   void dispose() {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
+    _confirmPassCtrl.dispose();
     super.dispose();
   }
 
@@ -136,6 +139,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     hintText: 'Create a password',
                     obscureText: _obscurePass,
                     autofillHints: const [AutofillHints.newPassword],
+                    onChanged: (_) => setState(() {}),
                     prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18, color: AppColors.textTertiary),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -149,6 +153,42 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     validator: (v) {
                       if (v == null || v.isEmpty) return AppStrings.fieldRequired;
                       if (v.length < 6) return 'Password must be at least 6 characters';
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Confirm Password
+                  const Text('Confirm Password', style: AppTextStyles.formLabel),
+                  const SizedBox(height: 8),
+                  _InputField(
+                    controller: _confirmPassCtrl,
+                    hintText: 'Re-enter your password',
+                    obscureText: _obscureConfirmPass,
+                    onChanged: (_) => setState(() {}),
+                    prefixIcon: const Icon(Icons.lock_outline_rounded, size: 18, color: AppColors.textTertiary),
+                    suffixIcon: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_passCtrl.text.isNotEmpty && _passCtrl.text == _confirmPassCtrl.text)
+                          const Padding(
+                            padding: EdgeInsets.only(right: 8.0),
+                            child: Icon(Icons.check_circle, color: Colors.green, size: 20),
+                          ),
+                        IconButton(
+                          icon: Icon(
+                            _obscureConfirmPass ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                            size: 20,
+                            color: AppColors.textTertiary,
+                          ),
+                          onPressed: () => setState(() => _obscureConfirmPass = !_obscureConfirmPass),
+                        ),
+                      ],
+                    ),
+                    onFieldSubmitted: (_) => _submit(),
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return AppStrings.fieldRequired;
+                      if (v != _passCtrl.text) return 'Passwords do not match';
                       return null;
                     },
                   ),
@@ -238,6 +278,7 @@ class _InputField extends StatelessWidget {
   final Iterable<String>? autofillHints;
   final String? Function(String?)? validator;
   final void Function(String)? onFieldSubmitted;
+  final void Function(String)? onChanged;
 
   const _InputField({
     required this.controller,
@@ -249,6 +290,7 @@ class _InputField extends StatelessWidget {
     this.autofillHints,
     this.validator,
     this.onFieldSubmitted,
+    this.onChanged,
   });
 
   @override
@@ -259,6 +301,7 @@ class _InputField extends StatelessWidget {
       keyboardType: keyboardType,
       autofillHints: autofillHints,
       onFieldSubmitted: onFieldSubmitted,
+      onChanged: onChanged,
       validator: validator,
       style: AppTextStyles.formInput,
       decoration: InputDecoration(

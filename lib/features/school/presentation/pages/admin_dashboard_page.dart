@@ -229,11 +229,11 @@ class AdminDashboardPage extends ConsumerWidget {
                   ),
                 ],
 
-                if (isManager) ...[
+                if (isManager || canManageSchool) ...[
                   _ActionCard(
-                    title: 'Manager Approvals',
+                    title: 'Leave Approvals',
                     subtitle:
-                        'Review and approve leave requests from your team.',
+                        'Review and approve leave requests for the school.',
                     icon: Icons.fact_check_outlined,
                     iconColor: AppColors.pending,
                     onTap: () => context.push(AppRoutes.approvals),
@@ -242,16 +242,16 @@ class AdminDashboardPage extends ConsumerWidget {
                   _ActionCard(
                     title: 'Team Directory',
                     subtitle:
-                        'View your team members and their leave balances.',
+                        'View team members and their leave balances.',
                     icon: Icons.people_outline,
                     iconColor: AppColors.primary,
                     onTap: () => context.push(AppRoutes.teamOverview),
                   ),
                   const SizedBox(height: 12),
                   _ActionCard(
-                    title: 'Team Reports',
+                    title: 'Leave Reports',
                     subtitle:
-                        'Analytics and leave reports for your department.',
+                        'Analytics and leave reports for the school.',
                     icon: Icons.analytics_outlined,
                     iconColor: AppColors.primary,
                     onTap: () => context.push(AppRoutes.reports),

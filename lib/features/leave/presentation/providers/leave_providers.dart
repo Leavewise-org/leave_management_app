@@ -68,6 +68,7 @@ class SubmitLeaveNotifier extends _$SubmitLeaveNotifier {
     required DateTime endDate,
     required String reason,
     required bool isHalfDay,
+    required double durationDays,
   }) async {
     state = const SubmitLeaveState(isLoading: true);
 
@@ -81,6 +82,7 @@ class SubmitLeaveNotifier extends _$SubmitLeaveNotifier {
         endDate: endDate,
         reason: reason,
         isHalfDay: isHalfDay,
+        durationDays: durationDays,
       );
 
       state = const SubmitLeaveState(isSuccess: true);

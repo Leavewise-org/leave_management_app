@@ -12,14 +12,21 @@ class SchoolSettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final schoolAsync = ref.watch(currentSchoolProvider);
 
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          context.go('/school/dashboard');
+        }
+      },
+      child: Scaffold(
       backgroundColor: AppColors.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.chevron_left_rounded, color: AppColors.textPrimary, size: 28),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/school/dashboard'),
         ),
         title: const Text(
           'School Settings',
@@ -54,6 +61,28 @@ class SchoolSettingsPage extends ConsumerWidget {
                     initialValue: school.address,
                     icon: Icons.location_on_outlined,
                   ),
+                  const SizedBox(height: 32),
+
+                  const Text('Holiday Settings', style: AppTextStyles.formLabel),
+                  const SizedBox(height: 16),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySubtle,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.event_available, color: AppColors.primary),
+                    ),
+                    title: const Text('Manage Public Holidays', style: TextStyle(fontWeight: FontWeight.w600)),
+                    subtitle: const Text('Add, edit or remove yearly holidays', style: TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+                    trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
+                    onTap: () {
+                      context.push('/school/holidays');
+                    },
+                  ),
+
                   const SizedBox(height: 32),
                   
                   const Text('Default Leave Quotas', style: AppTextStyles.formLabel),
@@ -103,6 +132,7 @@ class SchoolSettingsPage extends ConsumerWidget {
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, _) => Center(child: Text('Error: $err')),
+        ),
         ),
       ),
     );

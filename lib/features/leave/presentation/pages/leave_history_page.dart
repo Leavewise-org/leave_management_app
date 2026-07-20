@@ -22,10 +22,7 @@ class LeaveHistoryPage extends ConsumerWidget {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        if(Navigator.of(context).canPop()){
-          Navigator.of(context).pop();
-        }else{
+        if (!didPop) {
           context.go('/home');
         }
       },
@@ -36,7 +33,7 @@ class LeaveHistoryPage extends ConsumerWidget {
           elevation: 0,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.textPrimary),
-            onPressed: () => context.pop(),
+            onPressed: () => context.go('/home'),
           ),
           title: Text(
             'My History',
@@ -236,9 +233,13 @@ class LeaveHistoryPage extends ConsumerWidget {
         ? entity.durationDays.toInt().toString()
         : entity.durationDays.toString();
 
-    final dateStr = entity.durationDays == 1
-        ? '${dateFormat.format(entity.startDate)} (1 Day)'
-        : '${dateFormat.format(entity.startDate)} - ${dateFormat.format(entity.endDate)} ($durationStr Days)';
+    final isSameDay = entity.startDate.year == entity.endDate.year && 
+                      entity.startDate.month == entity.endDate.month && 
+                      entity.startDate.day == entity.endDate.day;
+
+    final dateStr = isSameDay
+        ? dateFormat.format(entity.startDate)
+        : '${dateFormat.format(entity.startDate)} \u2013 ${dateFormat.format(entity.endDate)} ($durationStr Days)';
 
     return _buildListItem(
       icon: theme.icon,
