@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Updates document status to `Cancelled` and restores pending quota.
+- [x] Updates document status to `Cancelled` and restores pending quota.
 
 ---
 
