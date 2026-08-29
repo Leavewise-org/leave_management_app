@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Provider filters request list dynamically when tabs change.
+- [x] Provider filters request list dynamically when tabs change.
 
 ---
 
