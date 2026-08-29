@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Firestore `policies` collection data mapping model.
+- [x] Firestore `policies` collection data mapping model.
 
 ---
 
