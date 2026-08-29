@@ -1,0 +1,22 @@
+====================================================
+🌴 LEAVEWISE FUTURE IDEAS & FEATURE ROADBACK BACKLOG
+====================================================
+
+1. AI-Powered Leave Approval Assistant
+   - Analyze team leave density and highlight potential staffing risks automatically when a manager views a pending request.
+
+2. Slack & Microsoft Teams Bot Integration
+   - Allow employees to submit quick leave requests via slash commands (e.g., `/leave apply 2 days casual`).
+   - Push instant approval notifications directly into manager direct messages.
+
+3. Biometric Authentication & Mobile Quick PIN
+   - Support FaceID / TouchID login for faster access on iOS and Android devices.
+
+4. Dynamic Fiscal Year & Carryover Automation
+   - Auto-calculate and transfer unused annual leave balances at midnight on the fiscal year start date based on custom school policy.
+
+5. Leave Balance Forecasting Engine
+   - Allow employees to simulate future leave balances for upcoming vacations months in advance.
+
+6. Geofenced Clock-in & Attendance Verification (Optional Add-on)
+   - Allow optional physical presence checking for school staff during working hours.
