@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Applies accrual rates based on employment contract tenure.
+- [x] Applies accrual rates based on employment contract tenure.
 
 ---
 
