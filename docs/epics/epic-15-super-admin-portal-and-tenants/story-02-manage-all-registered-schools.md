@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Excludes weekends and public holidays from date range calculations.
+- [x] Excludes weekends and public holidays from date range calculations.
 
 ---
 

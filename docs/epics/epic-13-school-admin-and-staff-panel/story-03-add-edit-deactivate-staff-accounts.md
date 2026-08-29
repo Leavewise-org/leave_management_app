@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Returns validation error if requested duration > remaining balance.
+- [x] Returns validation error if requested duration > remaining balance.
 
 ---
 

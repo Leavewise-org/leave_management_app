@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Displays policy guidelines and terms card UI.
+- [x] Displays policy guidelines and terms card UI.
 
 ---
 

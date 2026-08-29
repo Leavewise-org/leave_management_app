@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Converts leave records into formatted CSV string format.
+- [x] Converts leave records into formatted CSV string format.
 
 ---
 

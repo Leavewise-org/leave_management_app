@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Provider computes `totalQuota - usedDays - pendingDays`.
+- [x] Provider computes `totalQuota - usedDays - pendingDays`.
 
 ---
 
