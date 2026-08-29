@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Aggregates leave records grouped by department and leave type.
+- [x] Aggregates leave records grouped by department and leave type.
 
 ---
 

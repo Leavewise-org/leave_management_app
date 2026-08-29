@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Saves CSV file using `path_provider` and opens share sheet via `share_plus`.
+- [x] Saves CSV file using `path_provider` and opens share sheet via `share_plus`.
 
 ---
 
