@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Queries Firestore `leave_requests` collection filtered by user ID.
+- [x] Queries Firestore `leave_requests` collection filtered by user ID.
 
 ---
 
