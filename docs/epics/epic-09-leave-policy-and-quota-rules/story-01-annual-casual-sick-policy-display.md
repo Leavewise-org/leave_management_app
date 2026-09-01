@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Date range picker widget with duration counter badge.
+- [x] Date range picker widget with duration counter badge.
 
 ---
 
