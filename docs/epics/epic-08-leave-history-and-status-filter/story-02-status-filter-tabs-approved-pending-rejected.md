@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Image thumbnail preview and PDF badge widget.
+- [x] Image thumbnail preview and PDF badge widget.
 
 ---
 
