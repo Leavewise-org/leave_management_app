@@ -28,10 +28,10 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Registration form fields for Full Name, Email, Password, and Confirm Password.
-- [ ] Password match validation and minimum 6-character length check.
-- [ ] Form submission creates user account and triggers Firestore creation.
-- [ ] Action link provided to navigate back to the login page.
+- [x] Registration form fields for Full Name, Email, Password, and Confirm Password.
+- [x] Password match validation and minimum 6-character length check.
+- [x] Form submission creates user account and triggers Firestore creation.
+- [x] Action link provided to navigate back to the login page.
 
 ---
 
