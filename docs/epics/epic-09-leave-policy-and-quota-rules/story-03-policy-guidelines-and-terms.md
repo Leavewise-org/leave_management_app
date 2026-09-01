@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Multiline explanation text field and half-day toggle switch UI.
+- [x] Multiline explanation text field and half-day toggle switch UI.
 
 ---
 
