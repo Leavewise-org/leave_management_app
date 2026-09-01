@@ -26,7 +26,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Prompts for current password before accepting new password.
+- [x] Prompts for current password before accepting new password.
 
 ---
 
