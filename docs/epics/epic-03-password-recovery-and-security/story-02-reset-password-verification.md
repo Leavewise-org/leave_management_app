@@ -26,8 +26,8 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] School code entry input field.
-- [ ] Displays preview badge of matched school name and address.
+- [x] School code entry input field.
+- [x] Displays preview badge of matched school name and address.
 
 ---
 
