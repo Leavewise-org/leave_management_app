@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Displays approved future leave entries.
+- [x] Displays approved future leave entries.
 
 ---
 
