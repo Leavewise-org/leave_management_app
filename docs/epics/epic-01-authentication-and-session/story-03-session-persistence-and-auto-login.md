@@ -28,8 +28,8 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Displays Leavewise logo and progress indicator on app start.
-- [ ] Smooth transition to home dashboard or login page.
+- [x] Displays Leavewise logo and progress indicator on app start.
+- [x] Smooth transition to home dashboard or login page.
 
 ---
 
