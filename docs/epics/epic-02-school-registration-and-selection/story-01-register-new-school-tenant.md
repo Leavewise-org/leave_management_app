@@ -28,8 +28,8 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Email input field with syntax validation.
-- [ ] Displays confirmation dialog upon sending reset email.
+- [x] Email input field with syntax validation.
+- [x] Displays confirmation dialog upon sending reset email.
 
 ---
 
