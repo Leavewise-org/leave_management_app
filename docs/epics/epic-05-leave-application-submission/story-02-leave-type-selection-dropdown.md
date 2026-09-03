@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Dialog form with Title, Date, and Holiday Type selectors.
+- [x] Dialog form with Title, Date, and Holiday Type selectors.
 
 ---
 
