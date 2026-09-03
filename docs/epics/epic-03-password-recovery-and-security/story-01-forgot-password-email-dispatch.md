@@ -26,8 +26,8 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Searchable list of registered school tenants.
-- [ ] Selection highlight animation.
+- [x] Searchable list of registered school tenants.
+- [x] Selection highlight animation.
 
 ---
 

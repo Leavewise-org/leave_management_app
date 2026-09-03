@@ -26,8 +26,8 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Validates matching new password and confirm password fields.
-- [ ] Redirects to login page upon success.
+- [x] Validates matching new password and confirm password fields.
+- [x] Redirects to login page upon success.
 
 ---
 
