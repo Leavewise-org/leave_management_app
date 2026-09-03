@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Tapping date opens bottom sheet listing active events.
+- [x] Tapping date opens bottom sheet listing active events.
 
 ---
 
