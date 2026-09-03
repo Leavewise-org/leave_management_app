@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Renders event markers under date cells.
+- [x] Renders event markers under date cells.
 
 ---
 

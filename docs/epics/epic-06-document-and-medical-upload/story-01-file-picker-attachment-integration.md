@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Displays user full name, email, phone, and role badge.
+- [x] Displays user full name, email, phone, and role badge.
 
 ---
 

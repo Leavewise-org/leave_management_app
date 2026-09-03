@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Displays reporting manager name, email, and department title.
+- [x] Displays reporting manager name, email, and department title.
 
 ---
 

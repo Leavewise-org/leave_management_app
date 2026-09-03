@@ -27,8 +27,8 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Integrates `TableCalendar` widget with Month and 2-Week format toggles.
-- [ ] Listens to active user and team leave events.
+- [x] Integrates `TableCalendar` widget with Month and 2-Week format toggles.
+- [x] Listens to active user and team leave events.
 
 ---
 

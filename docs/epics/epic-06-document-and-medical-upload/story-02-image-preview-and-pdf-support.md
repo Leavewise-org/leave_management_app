@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Image avatar picker trigger and circular display badge.
+- [x] Image avatar picker trigger and circular display badge.
 
 ---
 

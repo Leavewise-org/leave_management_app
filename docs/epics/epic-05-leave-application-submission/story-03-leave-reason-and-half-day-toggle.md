@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] National holiday preset catalog importer UI.
+- [x] National holiday preset catalog importer UI.
 
 ---
 
