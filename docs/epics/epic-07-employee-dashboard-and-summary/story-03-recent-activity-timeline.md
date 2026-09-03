@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Timeline tiles with status badges (Approved, Pending, Rejected).
+- [x] Timeline tiles with status badges (Approved, Pending, Rejected).
 
 ---
 

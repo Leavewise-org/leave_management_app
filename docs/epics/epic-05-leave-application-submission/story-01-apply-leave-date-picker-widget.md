@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] List view of active holidays sorted chronologically.
+- [x] List view of active holidays sorted chronologically.
 
 ---
 

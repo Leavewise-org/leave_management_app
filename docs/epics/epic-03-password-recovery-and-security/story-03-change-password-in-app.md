@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Instant code lookup search bar.
+- [x] Instant code lookup search bar.
 
 ---
 

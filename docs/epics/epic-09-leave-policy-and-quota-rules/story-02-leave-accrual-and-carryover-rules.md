@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Dropdown selector showing active leave categories.
+- [x] Dropdown selector showing active leave categories.
 
 ---
 

@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] File upload dropzone button UI with format indicators (PDF, JPG, PNG).
+- [x] File upload dropzone button UI with format indicators (PDF, JPG, PNG).
 
 ---
 

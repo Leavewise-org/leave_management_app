@@ -24,7 +24,7 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Remove button removes file preview state cleanly.
+- [x] Remove button removes file preview state cleanly.
 
 ---
 

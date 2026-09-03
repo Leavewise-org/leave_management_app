@@ -30,10 +30,10 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Email input field validates correct email syntax.
-- [ ] Password field supports toggle for showing/hiding characters.
-- [ ] Tapping "Login" triggers loading state and invokes auth provider.
-- [ ] Errors are displayed in a clean snackbar/banner.
+- [x] Email input field validates correct email syntax.
+- [x] Password field supports toggle for showing/hiding characters.
+- [x] Tapping "Login" triggers loading state and invokes auth provider.
+- [x] Errors are displayed in a clean snackbar/banner.
 
 ---
 
