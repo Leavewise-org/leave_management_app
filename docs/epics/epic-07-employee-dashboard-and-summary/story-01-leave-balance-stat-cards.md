@@ -28,8 +28,8 @@
 ---
 
 ## ✅ 4. Acceptance Criteria
-- [ ] Displays summary cards for Annual, Casual, and Sick Leave.
-- [ ] Displays remaining quota indicators.
+- [x] Displays summary cards for Annual, Casual, and Sick Leave.
+- [x] Displays remaining quota indicators.
 
 ---
 
